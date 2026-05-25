@@ -125,6 +125,11 @@ export interface GitHubReleaseInfo {
   is_update_available: boolean;
 }
 
+export interface LoggingPaths {
+  database_path: string;
+  log_directory: string;
+}
+
 export interface CsvCompanyRow {
   name: string;
   owner?: string | null;

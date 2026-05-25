@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeLogged } from "./invokeLogged";
 import type {
   Company,
   Contractor,
@@ -7,85 +7,90 @@ import type {
   CsvSalesRow,
   Invoice,
   JobDescription,
+  LoggingPaths,
   MyCompanyInfo,
   OperationResult,
   PropertyAddressEntry,
 } from "./types";
 
 export const api = {
-  getDatabasePath: () => invoke<string>("get_database_path"),
-  createDatabaseBackup: () => invoke<number[]>("create_database_backup"),
+  getLoggingPaths: () => invokeLogged<LoggingPaths>("get_logging_paths"),
+  getDatabasePath: () => invokeLogged<string>("get_database_path"),
+  createDatabaseBackup: () => invokeLogged<number[]>("create_database_backup"),
   restoreDatabaseFile: (bytes: number[]) =>
-    invoke<void>("restore_database_file", { bytes }),
+    invokeLogged<void>("restore_database_file", { bytes }),
 
-  getMyCompanyInfo: () => invoke<MyCompanyInfo>("get_my_company_info"),
+  getMyCompanyInfo: () => invokeLogged<MyCompanyInfo>("get_my_company_info"),
   saveMyCompanyInfo: (info: MyCompanyInfo) =>
-    invoke<OperationResult<MyCompanyInfo>>("save_my_company_info", { info }),
+    invokeLogged<OperationResult<MyCompanyInfo>>("save_my_company_info", { info }),
 
-  getAllCompanies: () => invoke<Company[]>("get_all_companies"),
-  getNextCompanyId: () => invoke<number>("get_next_company_id"),
+  getAllCompanies: () => invokeLogged<Company[]>("get_all_companies"),
+  getNextCompanyId: () => invokeLogged<number>("get_next_company_id"),
   saveCompany: (company: Company) =>
-    invoke<OperationResult<Company>>("save_company", { company }),
+    invokeLogged<OperationResult<Company>>("save_company", { company }),
   ensureCompanyByName: (name: string) =>
-    invoke<OperationResult<Company>>("ensure_company_by_name", { name }),
+    invokeLogged<OperationResult<Company>>("ensure_company_by_name", { name }),
   deleteCompany: (companyId: number) =>
-    invoke<OperationResult<void>>("delete_company", { companyId }),
-  deleteSupervisor: (id: number) => invoke<void>("delete_supervisor", { id }),
-  deleteProperty: (id: number) => invoke<void>("delete_property", { id }),
+    invokeLogged<OperationResult<void>>("delete_company", { companyId }),
+  deleteSupervisor: (id: number) =>
+    invokeLogged<void>("delete_supervisor", { id }),
+  deleteProperty: (id: number) => invokeLogged<void>("delete_property", { id }),
   getCompanyPropertyAddresses: (companyName: string) =>
-    invoke<PropertyAddressEntry[]>("get_company_property_addresses", {
+    invokeLogged<PropertyAddressEntry[]>("get_company_property_addresses", {
       companyName,
     }),
 
-  getAllContractors: () => invoke<Contractor[]>("get_all_contractors"),
+  getAllContractors: () => invokeLogged<Contractor[]>("get_all_contractors"),
   saveContractor: (contractor: Contractor) =>
-    invoke<OperationResult<Contractor>>("save_contractor", { contractor }),
+    invokeLogged<OperationResult<Contractor>>("save_contractor", { contractor }),
   deleteContractor: (id: number) =>
-    invoke<OperationResult<void>>("delete_contractor", { id }),
+    invokeLogged<OperationResult<void>>("delete_contractor", { id }),
 
-  getAllJobs: () => invoke<JobDescription[]>("get_all_jobs"),
+  getAllJobs: () => invokeLogged<JobDescription[]>("get_all_jobs"),
   replaceAllJobs: (jobs: JobDescription[]) =>
-    invoke<OperationResult<void>>("replace_all_jobs", { jobs }),
+    invokeLogged<OperationResult<void>>("replace_all_jobs", { jobs }),
   findJobByKey: (
     description: string,
     sizeBedroom: number,
     sizeBathroom: number
   ) =>
-    invoke<JobDescription | null>("find_job_by_key", {
+    invokeLogged<JobDescription | null>("find_job_by_key", {
       description,
       sizeBedroom,
       sizeBathroom,
     }),
   upsertJob: (job: JobDescription) =>
-    invoke<OperationResult<JobDescription>>("upsert_job", { job }),
+    invokeLogged<OperationResult<JobDescription>>("upsert_job", { job }),
   deleteJob: (id: number) =>
-    invoke<OperationResult<void>>("delete_job", { id }),
+    invokeLogged<OperationResult<void>>("delete_job", { id }),
   deleteJobsByDescription: (description: string) =>
-    invoke<OperationResult<number>>("delete_jobs_by_description", {
+    invokeLogged<OperationResult<number>>("delete_jobs_by_description", {
       description,
     }),
 
-  getAllInvoices: () => invoke<Invoice[]>("get_all_invoices"),
+  getAllInvoices: () => invokeLogged<Invoice[]>("get_all_invoices"),
   getInvoicesByDateRange: (start: string, end: string) =>
-    invoke<Invoice[]>("get_invoices_by_date_range", { start, end }),
-  getInvoicesReceivable: () => invoke<Invoice[]>("get_invoices_receivable"),
-  getInvoicesSales: () => invoke<Invoice[]>("get_invoices_sales"),
-  getInvoicesActive: () => invoke<Invoice[]>("get_invoices_active"),
+    invokeLogged<Invoice[]>("get_invoices_by_date_range", { start, end }),
+  getInvoicesReceivable: () => invokeLogged<Invoice[]>("get_invoices_receivable"),
+  getInvoicesSales: () => invokeLogged<Invoice[]>("get_invoices_sales"),
+  getInvoicesActive: () => invokeLogged<Invoice[]>("get_invoices_active"),
   addInvoice: (invoice: Invoice) =>
-    invoke<OperationResult<Invoice>>("add_invoice", { invoice }),
+    invokeLogged<OperationResult<Invoice>>("add_invoice", { invoice }),
   updateInvoice: (invoice: Invoice) =>
-    invoke<OperationResult<Invoice>>("update_invoice", { invoice }),
+    invokeLogged<OperationResult<Invoice>>("update_invoice", { invoice }),
   deleteInvoice: (id: number) =>
-    invoke<OperationResult<void>>("delete_invoice", { id }),
+    invokeLogged<OperationResult<void>>("delete_invoice", { id }),
   applyReceivablePayments: (invoices: Invoice[]) =>
-    invoke<OperationResult<string>>("apply_receivable_payments", { invoices }),
+    invokeLogged<OperationResult<string>>("apply_receivable_payments", {
+      invoices,
+    }),
 
   importCompaniesCsv: (rows: CsvCompanyRow[]) =>
-    invoke<OperationResult<number>>("import_companies_csv", { rows }),
+    invokeLogged<OperationResult<number>>("import_companies_csv", { rows }),
   importPropertiesCsv: (rows: CsvPropertyRow[]) =>
-    invoke<OperationResult<number>>("import_properties_csv", { rows }),
+    invokeLogged<OperationResult<number>>("import_properties_csv", { rows }),
   importSalesCsv: (rows: CsvSalesRow[]) =>
-    invoke<OperationResult<number>>("import_sales_csv", { rows }),
+    invokeLogged<OperationResult<number>>("import_sales_csv", { rows }),
 
-  getAppVersion: () => invoke<string>("get_app_version"),
+  getAppVersion: () => invokeLogged<string>("get_app_version"),
 };

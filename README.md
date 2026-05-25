@@ -44,6 +44,23 @@ Build installer:
 npm run tauri build
 ```
 
+## Logging
+
+The app logs to **stdout** (visible in the terminal when using `npm run dev`) and to a rotating file via Tauri’s log directory.
+
+| Location | Typical Windows path |
+|----------|----------------------|
+| SQLite database | `%LocalAppData%\PaintContractor\Database\app.db` |
+| Log files | `%LocalAppData%\com.dksk.paintcontractor\logs\` (file prefix `app.log`) |
+
+On startup the app records the database path, log directory, and version (see **Import / Export** page for the DB path, or check the latest `app.log`).
+
+- **Frontend**: `src/utils/logger.ts` — all `api.*` calls go through `invokeLogged` with timing; errors in toasts and `ErrorBoundary` are logged.
+- **Backend**: every Tauri command logs `command.start` / `command.ok` / `command.error` with elapsed time; business validation failures log `command.business_error` via `OperationResult::err`.
+- **Sensitive fields** (email, phone, address, raw backup bytes) are redacted in frontend log context.
+
+For verbose IPC traces in development, run the desktop app in debug mode; production builds log destructive IPC at `info` and skip routine `debug` noise.
+
 ## Project layout
 
 | Path | Purpose |
@@ -70,17 +87,22 @@ A comprehensive production-grade test framework is documented in
 - **Total: ~400 tests** spanning every layer of the application
 - **Coverage gates** — ~67% line coverage with enforced minimum thresholds
 - **Coverage thresholds** enforced via `vitest.config.ts`
-- **GitHub Actions CI** runs every layer + `tsc` + `cargo fmt`/`clippy`
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) runs Vitest, Rust,
+  Playwright (mock IPC), `tsc`, and `clippy` on every push/PR — this is the
+  fast default gate
+- **WebDriver CI** (`.github/workflows/webdriver.yml`) runs separately on
+  Windows and Linux against the real desktop binary and SQLite — not part of
+  the main CI workflow
 
 ```bash
 npm test              # all Vitest suites
 npm run test:coverage # Vitest + V8 coverage (with thresholds)
 npm run test:rust     # cargo test (all Rust suites)
-npm run test:e2e      # Playwright E2E
-npm run test:smoke    # Playwright smoke matrix
-npm run test:all      # Vitest + cargo test + Playwright (fast CI default)
-npm run test:webdriver # real Tauri + SQLite (requires tauri-driver + Edge driver on Windows)
-npm run test:full     # test:all + both WebDriver suites
+npm run test:e2e      # Playwright E2E (mock IPC — same as CI playwright job)
+npm run test:smoke    # Playwright smoke matrix (mock IPC)
+npm run test:all      # Vitest + cargo test + Playwright (matches main CI scope)
+npm run test:webdriver # real Tauri + SQLite (matches webdriver.yml)
+npm run test:full     # test:all + both WebDriver suites (pre-release / local)
 ```
 
 ## Notes

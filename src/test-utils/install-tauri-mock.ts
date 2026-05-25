@@ -92,6 +92,11 @@ function nextId<T extends { id: number }>(rows: T[]): number {
 
 function registerDefaults(): void {
   handlers.set("get_database_path", async () => "(mock)/app.db");
+  handlers.set("get_logging_paths", async () => ({
+    database_path: "(mock)/app.db",
+    log_directory: "(mock)/logs",
+  }));
+  handlers.set("log_frontend", async () => null);
   handlers.set("get_app_version", async () => "1.0.0-mock");
 
   handlers.set("get_my_company_info", async () => stores.myCompany);

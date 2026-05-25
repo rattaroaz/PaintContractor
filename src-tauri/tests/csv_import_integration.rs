@@ -106,7 +106,7 @@ fn import_properties_attaches_to_existing_supervisor_and_skips_orphans() {
     let _db = TestDb::new();
     // Pre-create a company with a supervisor named "Pat" - properties CSV
     // requires an existing supervisor name.
-    let mut c = paint_contractor_lib::models::Company {
+    let c = paint_contractor_lib::models::Company {
         id: 0,
         company_id: 1000,
         name: "Acme".into(),
@@ -162,7 +162,7 @@ fn import_sales_creates_invoices_with_defaults_filled_in() {
     assert_eq!(invoices.len(), 2);
     for inv in invoices {
         assert_eq!(inv.status, 1, "imported sales rows become Submitted");
-        assert!(inv.contractor_name.len() > 0);
+        assert!(!inv.contractor_name.is_empty());
         assert!(inv.invoice_created_date.is_some());
         // ContractorName defaults to "N/A" when missing; here we pass "Alex"
         assert!(inv.contractor_name == "Alex" || inv.contractor_name == "N/A");

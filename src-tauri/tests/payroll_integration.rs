@@ -64,9 +64,9 @@ fn invoices_by_contractor_filter_through_status_buckets() {
 
     // Two for Alex, one for Bob — different status mixes.
     for (name, status, cost, paid) in [
-        ("Alex Painter", 0, 100, 0),  // draft
+        ("Alex Painter", 0, 100, 0),   // draft
         ("Alex Painter", 1, 200, 200), // sale + paid (not receivable)
-        ("Bob Painter", 1, 300, 0),   // sale + receivable
+        ("Bob Painter", 1, 300, 0),    // sale + receivable
     ] {
         let mut inv = make_invoice();
         inv.contractor_name = name.into();
@@ -80,8 +80,14 @@ fn invoices_by_contractor_filter_through_status_buckets() {
     let sales = get_invoices_sales().unwrap();
     let receivables = get_invoices_receivable().unwrap();
 
-    let alex_active = actives.iter().filter(|i| i.contractor_name == alex.name).count();
-    let alex_sales = sales.iter().filter(|i| i.contractor_name == alex.name).count();
+    let alex_active = actives
+        .iter()
+        .filter(|i| i.contractor_name == alex.name)
+        .count();
+    let alex_sales = sales
+        .iter()
+        .filter(|i| i.contractor_name == alex.name)
+        .count();
     let alex_rec = receivables
         .iter()
         .filter(|i| i.contractor_name == alex.name)

@@ -1,16 +1,54 @@
 pub mod commands;
 pub mod db;
+pub mod log_util;
 pub mod models;
 
 use commands::*;
+use log::{debug, error, info, warn};
+use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
+
+#[tauri::command]
+fn log_frontend(level: String, message: String, context: Option<String>) {
+    let ctx = context.as_deref().unwrap_or("");
+    match level.as_str() {
+        "error" => error!("[frontend] {} {}", message, ctx),
+        "warn" => warn!("[frontend] {} {}", message, ctx),
+        "debug" => debug!("[frontend] {} {}", message, ctx),
+        _ => info!("[frontend] {} {}", message, ctx),
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    db::init_db().expect("Failed to initialize database");
-
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir {
+                        file_name: Some("app".into()),
+                    }),
+                ])
+                .build(),
+        )
+        .setup(|app| {
+            db::init_db().expect("Failed to initialize database");
+            let log_dir = app
+                .path()
+                .app_log_dir()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|e| format!("(unavailable: {e})"));
+            info!(
+                "Starting DKSK Paint Contractor v{} database_path={} log_directory={}",
+                env!("CARGO_PKG_VERSION"),
+                db::db_path().display(),
+                log_dir
+            );
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_database_path,
             create_database_backup,
@@ -47,6 +85,8 @@ pub fn run() {
             import_properties_csv,
             import_sales_csv,
             get_app_version,
+            get_logging_paths,
+            log_frontend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

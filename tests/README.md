@@ -41,17 +41,29 @@ src-tauri/
 
 ## Continuous Integration
 
-`.github/workflows/ci.yml` runs five parallel jobs on every push and PR:
+### Main CI (every push / PR)
 
-1. `vitest` — every Vitest suite (incl. coverage with hard thresholds)
-2. `rust` — `cargo test` with cached registry/build
-3. `playwright` — Playwright E2E + smoke matrix (mock IPC, fast)
-4. `typecheck` — `tsc --noEmit` plus `npm run build`
-5. `clippy` — `cargo fmt --check` + `cargo clippy -D warnings`
+`.github/workflows/ci.yml` runs five parallel jobs. This is the **fast
+default gate** — Playwright uses **mocked Tauri IPC** (`VITE_TAURI_MOCK=1`),
+not the real desktop runtime.
+
+| Job | What it validates |
+|-----|-------------------|
+| `vitest` | Unit, integration, contract, property, snapshot, a11y (+ coverage thresholds) |
+| `rust` | `cargo test` (real SQLite in temp dirs) |
+| `playwright` | E2E + smoke matrix (mock IPC) |
+| `typecheck` | `tsc --noEmit` + production Vite build |
+| `clippy` | `cargo fmt --check` + `cargo clippy -D warnings` |
+
+`npm run test:all` matches this scope locally (Vitest + Rust + Playwright).
+
+### WebDriver CI (separate workflow)
 
 `.github/workflows/webdriver.yml` runs **WebDriverIO + tauri-driver** on
 `windows-latest` and `ubuntu-latest` against the real debug binary and an
-isolated temp SQLite file. See `webdriver/README.md`.
+isolated temp SQLite file. It does **not** run inside `ci.yml`. See
+`webdriver/README.md`. Use `npm run test:full` before releases to run both
+tiers locally.
 
 ## NPM scripts
 
@@ -104,6 +116,16 @@ Playwright covers decline-path confirm dialogs via mocked
 `plugin:dialog|message`. WebDriver destructive specs use a debug-only
 `VITE_AUTO_CONFIRM` build flag because native OS dialogs are not
 WebDriver-automatable.
+
+### Application logging
+
+- **Frontend**: `src/utils/logger.ts` + `src/invokeLogged.ts` (all `api.*` IPC traced)
+- **Backend**: `src-tauri/src/log_util.rs` wraps every `#[tauri::command]`
+- **Paths**: `get_logging_paths` command; startup logs version + DB + log dir
+- **Tests**: `tests/unit/logger.test.ts` (redaction, destructive IPC args in
+  production, `log_frontend` bridge); Rust `log_util` tests assert
+  `OperationResult::err` emits `command.business_error` via
+  `log_operation_failure`
 
 ## Updating snapshots
 

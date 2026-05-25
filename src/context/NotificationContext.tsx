@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { logger } from "../utils/logger";
 
 export type NotificationType = "success" | "error" | "info";
 
@@ -38,6 +39,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const notify = useCallback(
     (type: NotificationType, message: string, durationMs = 4000) => {
       const id = nextId++;
+      if (type === "error") {
+        logger.error("User-facing error", { message });
+      } else if (type === "success") {
+        logger.info("User-facing success", { message });
+      } else {
+        logger.debug("User-facing info", { message });
+      }
       setToasts((prev) => [...prev, { id, type, message }]);
       window.setTimeout(() => remove(id), durationMs);
     },

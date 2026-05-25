@@ -62,7 +62,16 @@ fn job_description_keys_match_typescript() {
         price: 100,
     })
     .unwrap();
-    assert_keys(&v, &["id", "description", "size_bedroom", "size_bathroom", "price"]);
+    assert_keys(
+        &v,
+        &[
+            "id",
+            "description",
+            "size_bedroom",
+            "size_bathroom",
+            "price",
+        ],
+    );
 }
 
 #[test]
@@ -145,7 +154,10 @@ fn operation_result_failure_includes_message_and_no_data() {
     let obj = v.as_object().unwrap();
     assert!(obj.contains_key("success"));
     assert!(obj.contains_key("message"));
-    assert!(!obj.contains_key("data"), "data should be skipped when None");
+    assert!(
+        !obj.contains_key("data"),
+        "data should be skipped when None"
+    );
     assert_eq!(v["success"], json!(false));
     assert_eq!(v["message"], json!("nope"));
 }
@@ -164,7 +176,15 @@ fn my_company_info_keys_match_typescript() {
     .unwrap();
     assert_keys(
         &v,
-        &["id", "name", "phone", "email", "address", "zip", "license_number"],
+        &[
+            "id",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "zip",
+            "license_number",
+        ],
     );
 }
 
@@ -179,7 +199,10 @@ fn supervisor_keys_match_typescript() {
         properties: vec![],
     })
     .unwrap();
-    assert_keys(&v, &["id", "name", "phone", "email", "company_id", "properties"]);
+    assert_keys(
+        &v,
+        &["id", "name", "phone", "email", "company_id", "properties"],
+    );
 }
 
 #[test]

@@ -7,8 +7,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { api } from "../api";
 import type { MyCompanyInfo } from "../types";
+import { logger } from "../utils/logger";
 
 interface GlobalStateContextValue {
   currentSection: string;
@@ -50,6 +52,15 @@ export function GlobalStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      if (isTauri()) {
+        try {
+          const paths = await api.getLoggingPaths();
+          const version = await api.getAppVersion();
+          logger.info("Application ready", { version, ...paths });
+        } catch (e) {
+          logger.warn("Startup diagnostics unavailable", { error: String(e) });
+        }
+      }
       await refreshCompanyInfo();
       setLoading(false);
     })();

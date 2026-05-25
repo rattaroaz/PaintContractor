@@ -1,3 +1,4 @@
+use crate::log_util;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +25,7 @@ impl<T> OperationResult<T> {
         }
     }
     pub fn err(msg: &str) -> Self {
+        log_util::log_operation_failure("operation_result", msg);
         Self {
             success: false,
             message: msg.to_string(),

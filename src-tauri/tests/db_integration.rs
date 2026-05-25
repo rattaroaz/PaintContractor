@@ -123,7 +123,10 @@ fn upsert_job_uses_composite_key_and_overwrites_price() {
     .data
     .expect("saved");
 
-    assert_eq!(first.id, second.id, "same composite key should update in place");
+    assert_eq!(
+        first.id, second.id,
+        "same composite key should update in place"
+    );
     assert_eq!(second.price, 150);
     let all = get_all_jobs().unwrap();
     assert_eq!(all.len(), 1);

@@ -5,14 +5,15 @@
 mod common;
 
 use common::TestDb;
+use paint_contractor_lib::commands::CsvCompanyRow;
 use paint_contractor_lib::commands::*;
 use paint_contractor_lib::models::*;
-use paint_contractor_lib::commands::CsvCompanyRow;
 use proptest::prelude::*;
 use serial_test::serial;
 
 fn arb_description() -> impl Strategy<Value = String> {
-    "[A-Za-z][A-Za-z0-9 _-]{0,15}".prop_map(|s| s.trim().to_string())
+    "[A-Za-z][A-Za-z0-9 _-]{0,15}"
+        .prop_map(|s| s.trim().to_string())
         .prop_filter("non-empty", |s| !s.is_empty())
 }
 

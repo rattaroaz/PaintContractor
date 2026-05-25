@@ -1,3 +1,4 @@
+use log::{info, warn};
 use rusqlite::{Connection, OptionalExtension};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -30,6 +31,7 @@ pub fn reset_for_tests() {
 
 pub fn init_db() -> Result<(), String> {
     let path = db_path();
+    info!("Initializing SQLite at {}", path.display());
     let conn = Connection::open(&path).map_err(|e| e.to_string())?;
     conn.execute_batch(
         "
@@ -162,8 +164,11 @@ fn ensure_defaults(conn: &Connection) -> Result<(), String> {
         .query_row("SELECT COUNT(*) FROM Invoice", [], |r| r.get(0))
         .map_err(|e| e.to_string())?;
     if inv_count == 0 {
-        conn.execute("DELETE FROM Company WHERE Name IN ('Demo Company', 'Sample Client')", [])
-            .ok();
+        conn.execute(
+            "DELETE FROM Company WHERE Name IN ('Demo Company', 'Sample Client')",
+            [],
+        )
+        .ok();
         conn.execute(
             "DELETE FROM Contractor WHERE Name IN ('Demo Contractor', 'Sample Sub')",
             [],
@@ -174,6 +179,7 @@ fn ensure_defaults(conn: &Connection) -> Result<(), String> {
 }
 
 pub fn restore_db(bytes: &[u8]) -> Result<(), String> {
+    warn!("Restoring database from backup ({} bytes)", bytes.len());
     if bytes.len() < 16 || &bytes[0..16] != b"SQLite format 3\0" {
         return Err("Invalid SQLite database file".to_string());
     }
@@ -192,7 +198,9 @@ pub fn restore_db(bytes: &[u8]) -> Result<(), String> {
     let shm = path.with_extension("db-shm");
     let _ = std::fs::remove_file(wal);
     let _ = std::fs::remove_file(shm);
-    init_db()
+    init_db()?;
+    info!("Database restore completed");
+    Ok(())
 }
 
 pub fn backup_bytes() -> Result<Vec<u8>, String> {
@@ -201,17 +209,17 @@ pub fn backup_bytes() -> Result<Vec<u8>, String> {
             .map_err(|e| e.to_string())?;
         Ok(())
     })?;
-    std::fs::read(db_path()).map_err(|e| e.to_string())
+    let bytes = std::fs::read(db_path()).map_err(|e| e.to_string())?;
+    info!("Database backup read ({} bytes)", bytes.len());
+    Ok(bytes)
 }
 
 pub fn next_company_id(conn: &Connection) -> Result<i32, String> {
     for id in 1000..=9999 {
         let exists: Option<i64> = conn
-            .query_row(
-                "SELECT Id FROM Company WHERE CompanyID = ?1",
-                [id],
-                |r| r.get(0),
-            )
+            .query_row("SELECT Id FROM Company WHERE CompanyID = ?1", [id], |r| {
+                r.get(0)
+            })
             .optional()
             .map_err(|e| e.to_string())?;
         if exists.is_none() {
