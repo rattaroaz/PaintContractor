@@ -1,0 +1,1063 @@
+================================================================================
+DKSKMAUI — CLEANROOM FUNCTIONAL & UI SPECIFICATION
+================================================================================
+Version: 1.1 (derived from DKSKMaui codebase; verified against source)
+Purpose: Enable an AI coder to reproduce this application with 100% functional
+         parity on another language/platform. This document describes product
+         behavior, data, business rules, screens, and appearance only.
+EXCLUDED BY DESIGN: automated testing infrastructure, CI pipelines, and the
+         application logging/monitoring/diagnostic subsystem.
+
+Verification notes for re-implementers:
+  - Global type aliases exist in ModelAliases.cs:
+        Company             ≡ DKSKMaui.Backend.Models.Company
+        JobDescriptionModel ≡ DKSKMaui.Backend.Models.JobDescription
+    Both names refer to the same entity; pick one in your re-implementation.
+  - Create Invoice UI lives under route /createinvoice (folder CreateInvoice).
+================================================================================
+
+TABLE OF CONTENTS
+  1. Product identity and users
+  2. Platform and technical stack
+  3. Application shell and global UI
+  4. Navigation map (all routes)
+  5. Data model (database schema and relationships)
+  6. Invoice lifecycle and status machine
+  7. Core business rules and calculations
+  8. Service layer (behavioral contracts)
+  9. Page-by-page functional specification
+ 10. Shared UI components
+ 11. Import, export, backup, and restore
+ 12. Client-side report generation (PDF / Excel)
+ 13. Application update system (GitHub releases)
+ 14. Persistence, startup, and configuration
+ 15. Error handling (user-visible only)
+ 16. Reproduction checklist for implementers
+
+================================================================================
+1. PRODUCT IDENTITY AND USERS
+================================================================================
+
+Name: DKSK Official — Painting Contractor Management System
+Short brand in UI: "DKSK"
+Audience: Internal staff of a painting contractor business (DKSK Official).
+
+Primary goals:
+  - Record work orders and convert them into draft invoices, then submit invoices.
+  - Track client companies, properties, supervisors, and subcontractors.
+  - Manage a catalog of job types with bedroom/bathroom sizes and prices.
+  - Run finance views: accounts receivable, aging, sales, payroll, contractor jobs.
+  - Export filtered data to PDF and Excel.
+  - Backup/restore the SQLite database and import master data from CSV.
+  - Optionally auto-update the desktop app from GitHub releases.
+
+The app is a single-user desktop experience (no multi-user auth in UI). Company
+profile ("My Company Info") appears on home/dashboard and in exported reports.
+
+================================================================================
+2. PLATFORM AND TECHNICAL STACK (REFERENCE IMPLEMENTATION)
+================================================================================
+
+Reference implementation (for parity, not mandatory for reimplementation):
+  - .NET 10, .NET MAUI hybrid app targeting Windows 10 (10.0.19041.0+).
+  - UI: Blazor components hosted in MAUI WebView.
+  - UI library: Radzen Blazor 4.x (Material-based theme: material-base.css).
+  - Layout/CSS: Bootstrap 5 + custom app.css + scoped layout CSS.
+  - ORM: Entity Framework Core 10 with SQLite.
+  - Data file location: %LocalAppData%\DKSKMaui\Database\app.db
+  - Optional: CommunityToolkit.Maui for file pickers (backup save location).
+  - Radzen global overlays: Dialog, Notification, Tooltip, ContextMenu (root).
+
+Reimplementers may use any stack if all behaviors in sections 5–15 are preserved.
+
+================================================================================
+3. APPLICATION SHELL AND GLOBAL UI
+================================================================================
+
+3.1 Layout structure
+  - Two-column shell on viewports >= 641px:
+      LEFT: Fixed sidebar 250px wide, full viewport height, sticky top.
+      RIGHT: Main content area with horizontal padding (2rem left, 1.5rem right).
+  - On narrow screens (< 641px): stacked column layout; hamburger toggles nav.
+
+3.2 Sidebar appearance
+  - Background: vertical linear gradient from rgb(5, 39, 103) at top to
+    #3a0647 at 70% (deep blue → purple).
+  - Top bar within sidebar: navbar-dark, brand link "DKSK" with Radzen "apps" icon.
+  - Nav links: white/light text, Radzen icons per item, Bootstrap nav-link styling.
+  - Section headers in sidebar (uppercase, small, text-white-50):
+      Operations | Finance | Reference Data | System | Settings
+  - Context block at top of nav (small, text-white-50):
+      "Current Section: {GlobalState.CurrentSection}"
+      "Company: {GlobalState.CurrentCompanyInfo.Name}" when profile loaded.
+
+3.3 Main content area
+  - Page titles: centered h3 with Radzen icon + descriptive title (e.g. "Start Job").
+  - Forms use Bootstrap grid (container, row, col-md-*), RadzenStack where noted.
+  - Primary actions: RadzenButton (Primary/Success/Warning/Danger/Info/Light).
+  - Data tables: mostly RadzenDataGrid (paging 10, sorting, resize/reorder on
+    finance grids); a few finance pages also import Microsoft QuickGrid.
+  - User feedback: Radzen NotificationService toasts (Success/Error/Info), 3–5s.
+  - Modals: Radzen DialogService (confirmation, item picker, invoice confirm).
+
+3.3.1 Root composition (Routes.razor / App.razor / MainLayout.razor)
+  - Router is wrapped by CustomErrorBoundary at the top level (Routes.razor).
+  - All four Radzen overlay components are registered once at the root:
+      <RadzenDialog />, <RadzenNotification />, <RadzenTooltip />,
+      <RadzenContextMenu />.
+  - MainLayout also wraps @Body in its own CustomErrorBoundary and re-registers
+    Dialog + Notification (harmless duplicate registration).
+  - NotFound renders inside MainLayout with a simple "Sorry, there's nothing
+    at this address." message.
+  - FocusOnNavigate targets "h1" on route change.
+  - Blazor error UI bar (yellow) with Reload link is present in index.html.
+
+3.4 Typography and colors (content area)
+  - Font family: 'Helvetica Neue', Helvetica, Arial, sans-serif.
+  - Links / btn-link: #006bb7.
+  - Primary button: background #1b6ec2, border #1861ac, white text.
+  - Valid field outline: #26b050; invalid: #e50000; validation messages red.
+  - Job catalog rows: existing jobs lightgreen background; new unsaved rows lightpink.
+
+3.5 Global state (in-memory, session)
+  GlobalStateService holds:
+    - CurrentCompanyInfo (MyCompanyInfo, from DB)
+    - CurrentSection (string label shown in sidebar)
+  Pages call SetCurrentSection on load. OnChange event refreshes NavMenu.
+
+  Exact section labels set per page (others inherit the previously set value):
+    Home (/)                          → "Dashboard"
+    /startjob, /activejobs            → "Operations"
+    /createinvoice                    → "Billing"
+    /accountsreceivable, /sales       → "Finance"
+    (other pages do not call SetCurrentSection)
+
+3.6 Client-side persistence (localStorage)
+  - Accounts Receivable persists user-reordered grid columns under the key
+    "AccountReceivableColumnOrder" (comma-separated column titles). On load,
+    the grid restores the saved order if present.
+  - Preferences.LastBackupDirectory remembers the last folder used for Quick
+    Backup (MAUI Preferences, not localStorage).
+
+3.7 Result pattern (all workflows)
+  OperationResult { bool Success; string Message; }
+  OperationResult<T> { T? Data; } inherits Success/Message.
+  UI maps Success → green notification; Failure → red with Message text.
+
+================================================================================
+4. NAVIGATION MAP (ALL ROUTES)
+================================================================================
+
+Sidebar order (top to bottom), grouped by section header:
+
+  OPERATIONS
+    Start Job              → /startjob              (icon: description)
+    Active Jobs            → /activejobs            (icon: work)
+    Create Invoice         → /createinvoice         (icon: receipt_long)
+
+  FINANCE
+    Accounts Receivable    → /accountsreceivable    (icon: account_balance)
+    Aging Reports          → /agingreports          (icon: calendar_today)
+    Sales                  → /sales                 (icon: trending_up)
+    Payroll                → /payroll               (icon: money)
+    Contractor Jobs        → /contractorjobs        (icon: construction)
+
+  REFERENCE DATA
+    Contacts               → /editviewcontacts      (icon: contacts)
+    Job Catalog            → /newjobs               (icon: add_circle_outline)
+
+  SYSTEM
+    Import / Export / Backup → /importexport        (icon: import_export)
+    System Tests           → /test                  (icon: bug_report)
+      [Runtime diagnostic page that tests DB connectivity and update service;
+       see §9.21. Functional content is omitted from this spec per the
+       "no testing/logging" exclusion; the nav entry itself is part of the UI.]
+
+  SETTINGS
+    Update Settings        → /settings/updates      (icon: settings)
+
+The brand link in the top of the sidebar ("DKSK" with apps icon) links to "" (root).
+
+Routes accessible by direct navigation only (not in sidebar):
+  /                                — Home / My Company Info form
+  /settings/updates/dashboard      — Detailed update progress dashboard
+  /addcontacts                     — Radio-button switcher (Add Contacts hub)
+  /addcontacts/addcompany          — Standalone Add Company form
+  /addcontacts/addsupervisor       — Standalone Add Supervisor form
+  /addcontacts/addproperty         — Standalone Add Property form
+  /addcontacts/addcontractor       — Standalone Add Contractor form
+  /addcontacts/addmanager          — Standalone Add Manager form
+  /editcontacts/editcompany        — Embedded inside /editviewcontacts
+  /editcontacts/editcontractor     — Embedded inside /editviewcontacts
+  /start-job-dialog                — @page route used as DialogService modal
+  /createinvoice-confirm-dialog    — @page route used as DialogService modal
+  /sales-detail-dialog             — @page route used as DialogService modal
+  /profile                         — Informational card; auth was removed
+  /logout                          — Immediately redirects to "/"; auth was removed
+  /Error                           — Standard error page
+
+NOTE: Create Invoice page route is /createinvoice (folder CreateInvoice).
+
+================================================================================
+5. DATA MODEL (DATABASE SCHEMA AND RELATIONSHIPS)
+================================================================================
+
+Engine: SQLite. Single file app.db under user app data folder.
+
+Entity: MyCompanyInfo (singleton business profile for DKSK)
+  Id (PK, identity)
+  Name          required, max 100
+  Phone         required, [Phone] validator, max 20
+  Email         required, [EmailAddress] validator, max 100
+  Address       required, max 200
+  Zip           required, max 10
+  LicenseNumber required, max 50
+
+Entity: Company (table name "Company")
+  Id (PK, identity)
+  CompanyID    required int, [Range 1000–9999], unique DB index
+  Name         required, max 100
+  Owner        optional, max 100
+  Phone        optional, [Phone] validator, max 20
+  Email        optional, [EmailAddress] validator, max 100
+  Address      optional, max 200
+  City         optional, max 50
+  Zip          optional, max 10
+  SpecialNote  optional, max 500
+  Navigation:  List<Supervisor> Supervisors
+
+Entity: Supervisor
+  Id (PK, identity)
+  Name (required string), Phone (optional), Email (optional)
+  CompanyId (FK → Company.Id), CASCADE delete
+  Navigation: parent Company [Required, JsonIgnore], List<Properties> Properties
+
+Entity: Properties (property/site under a supervisor)
+  Id (PK, identity)
+  Name (string, default ""), Address, City, Zip (all optional)
+  GateCode, GarageRemoteCode, LockBox, SpecialNote (optional)
+  ManagerName, ManagerPhone, ManagerEmail (optional)
+  IsActive (bool?)
+  SupervisorId (FK → Supervisor.Id), CASCADE delete
+  Navigation: Supervisor Supervisor [Required, JsonIgnore] — JsonIgnore on the
+  back-reference prevents cycles in JSON backup/restore.
+
+Entity: Contractor
+  Id (PK, identity)
+  Name              required, max 100, unique by exact name on save
+  LicenseNumber     optional, max 50
+  SocialSecurityNumber  optional, max 20
+  ContractorID      optional string, max 50  (free-form business identifier)
+  PayrollPercent    optional string, max 10
+  CellPhone         optional, [Phone] validator, max 20
+  Email             optional, [EmailAddress] validator, max 100
+  Address           optional, max 200
+  City              optional, max 50
+  Zip               optional, max 10
+  SpecialNote       optional, max 500
+  IsActive          bool?  — only active contractors appear in invoice contractor lists
+
+Entity: JobDescription (table "JobDescription"; global alias JobDescriptionModel)
+  Id (PK, identity)
+  description (string, default ""), sizeBedroom (int), sizeBathroom (int),
+  price (int)
+  NotMapped + JsonIgnored aliases Description / SizeBedroom / SizeBathroom /
+  Price route to the lowercase backing fields for code that prefers PascalCase.
+
+Entity: Invoice
+  Id (PK, identity)
+  TodaysDate      required, not MinValue
+  WorkDate        required, not MinValue
+  CompanyName     required, max 100
+  PropertyAddress required, max 200
+  Unit            required, max 50
+  GateCode        optional, max 50
+  LockBox         optional, max 50
+  SizeBedroom     [Range 0..20]
+  SizeBathroom    [Range 0..20]
+  WorkOrder       optional, max 100
+  JobDescriptionChoice  required string — JSON array of selected job
+                  description names (catalog "description" values)
+  ContractorName  required, max 100  (drafts created by Start Job use "N/A")
+  AmountCost      int, [Range 0..int.MaxValue]
+  AmountPaid1     int, [Range 0..int.MaxValue]
+  DatePaid1       DateTime
+  CheckNumber1    optional, max 100
+  AmountPaid2     int, [Range 0..int.MaxValue]
+  DatePaid2       DateTime
+  CheckNumber2    optional, max 100
+  InvoiceCreatedDate  DateTime? — set when Status moves to Submitted
+  SpecialNote     optional, max 1000
+  GarageRemoteCode optional, max 50
+  Status          int (maps to InvoiceStatus enum; see §6)
+  IValidatableObject.Validate enforces:
+    - TodaysDate / WorkDate not MinValue
+    - AmountPaid1 + AmountPaid2 ≤ AmountCost
+      (error: "Combined paid amount cannot be greater than amount cost.")
+
+Helper type Payment { DateTime Date; int Amount; string CheckNumber; } exists
+in Invoice.cs but is not persisted and is not currently used by the UI; safe
+to omit in a re-implementation.
+
+Relationships:
+  Company 1—* Supervisor 1—* Properties (cascade deletes)
+  Invoice is denormalized (stores CompanyName/PropertyAddress strings, not FKs)
+
+Invoice display number (UI convention, not stored):
+  DisplayInvoiceNumber = Invoice.Id + 10000 (string)
+
+================================================================================
+6. INVOICE LIFECYCLE AND STATUS MACHINE
+================================================================================
+
+enum InvoiceStatus:
+  Draft = 0      — work order / draft invoice, not yet finalized for billing
+  Submitted = 1  — finalized invoice (sales); InvoiceCreatedDate set
+  Paid = 2       — (enum exists; primary filtering uses payment amounts)
+
+Query definitions (must match exactly):
+  Active jobs list:     Status == Draft
+  Create invoice search: Status == Draft, filtered by WorkDate range
+  Sales list:           Status == Submitted
+  Accounts receivable:  AmountCost > (AmountPaid1 + AmountPaid2)  [any status]
+  Aging reports:        derived from receivable + date logic (see page spec)
+
+Typical flow:
+  1. Start Job → builds draft Invoice in memory → confirm dialog → persist as Draft
+  2. Create Invoice → find Drafts in date range → user selects row → confirm dialog
+     → assign contractor, job lines → Submit → Status Submitted, recalc AmountCost
+  3. Accounts Receivable → record payments on selected rows → update DB
+  4. Sales / Active Jobs / Payroll → read-only grids with filters + export
+
+AmountCost calculation (whenever job lines matter):
+  JobDescriptionChoice is JSON list of strings (job catalog description names).
+  Sum JobDescription.price for each name that exists in catalog.
+  If JSON invalid/empty → AmountCost 0.
+
+================================================================================
+7. CORE BUSINESS RULES AND CALCULATIONS
+================================================================================
+
+7.1 Company
+  - CompanyID must be unique (DB unique index).
+  - On create: duplicate Name or CompanyID rejected with user message.
+  - EnsureCompanyByName: trim name; if exists return it; else allocate new CompanyID
+    in range 1000–9999 (scan for next free); fail if range exhausted.
+  - Delete company cascades supervisors and properties.
+
+7.2 Contractor
+  - Save: duplicate Name rejected (case-sensitive DB check).
+  - Delete by Id; not found → false.
+
+7.3 Job catalog
+  - ReplaceAll: replaces entire JobDescription table with provided list (used by
+    Job Catalog page save). Null list rejected.
+
+7.4 Invoice validation (data annotations + IValidatableObject)
+  - Required fields per Invoice model.
+  - Combined payments cannot exceed AmountCost.
+  - Start Job / invoice workflows use ModelValidationService.Validate(model)
+    returning OperationResult with first validation error message.
+
+7.5 Accounts receivable payment application
+  - User selects invoices via checkboxes; edits AmountPaid1/2, dates, check numbers.
+  - "Done" applies payments via InvoiceDashboardService.ApplyReceivablePaymentsAsync:
+      For each selected invoice: if AmountPaid1+AmountPaid2 > AmountCost → fail entire
+      batch with message "The paid amount can not be greater than amount due!"
+      Else update each invoice in DB.
+  - Reports count of updated and "fully paid" invoices in success message.
+
+7.6 Company / Property selection (Start Job)
+  - Company name input is autocomplete (EditableDropdown) bound to company name list.
+  - If the user types a company name that does NOT match any existing company:
+      A Radzen Confirm dialog appears with:
+        Title:   "Company Not Found"
+        Message: "'{typed name}' was not found. Would you like to add it as a
+                  new company?"
+        Buttons: "Add Company" / "Cancel"
+      If confirmed, CompanyService.EnsureCompanyByNameAsync is called which:
+        - Trims the name
+        - Allocates the next free CompanyID in 1000–9999 (linear scan)
+        - Persists a new Company row
+        - Returns the new entity
+      The dropdown lists are augmented in memory with the new company.
+      A success notification "'{name}' has been saved to the database." is shown.
+  - Selecting an existing company loads its properties (via supervisors).
+  - Selecting a property address auto-fills GateCode, LockBox, SpecialNote, and
+    GarageRemoteCode on the form from the matching Properties record. Clearing
+    the property selection clears these fields.
+
+7.7 First-time database
+  - On startup: EF migrations applied; EnsureDefaults creates an empty
+    MyCompanyInfo row if none exists.
+  - Removes known demo seed rows if no invoices exist (demo company/contractor
+    names embedded in the seed data).
+
+================================================================================
+8. SERVICE LAYER (BEHAVIORAL CONTRACTS)
+================================================================================
+
+Implement as injectable services with async methods returning OperationResult where noted.
+
+CompanyService:
+  - GetAllCompaniesAsync / GetAllCompaniesResultAsync (include Supervisors→Properties)
+  - SaveCompanyAsync(company) → (bool, errorMessage); create vs update by Id==0
+  - EnsureCompanyByNameAsync(name)
+  - DeleteCompanyAsync(companyId)
+
+SupervisorService: CRUD by Id; list all; get by id; save; delete.
+
+PropertiesService:
+  - GetPropertiesByCompanyIdAsync(companyId) — walks company supervisors
+  - CRUD for properties
+
+ContractorService: list all; save (duplicate name check); delete; EnsureContractorByName
+
+JobDescriptionService (JobDescriptionService class in NewJobsService.cs file):
+  - GetAllJobsAsync / GetAllJobsResultAsync
+  - ReplaceAll(List<JobDescriptionModel>)
+
+InvoiceService:
+  - AddInvoiceAsync / AddInvoiceResultAsync
+  - GetInvoicesByDateRangeAsync (WorkDate inclusive)
+  - GetInvoicesReceivable (AmountCost > paid sum)
+  - GetInvoicesSales (Status == Submitted)
+  - GetInvoicesActive (Status == Draft)
+  - GetAllInvoicesAsync
+  - UpdateInvoiceAsync / UpdateInvoiceResultAsync
+  - DeleteInvoiceAsync / DeleteInvoiceResultAsync
+
+InvoicePresentationService:
+  - ViewAllOption = "View All"
+  - BuildCompanyNames, BuildAddresses (prepend View All)
+  - ApplyFilters(criteria): company, address, start/end WorkDate
+  - FormatInvoiceNumber(invoice) → (Id+10000).ToString()
+  - FormatDate → MM/dd/yyyy
+  - ResolveJobDescriptions(json, jobs) → list of JobDescriptionModel
+
+InvoiceDashboardService:
+  - LoadSalesAsync / LoadActiveAsync / LoadReceivablesAsync → InvoiceDashboardData
+    { Invoices, CompanyNames, Addresses }
+  - ApplyReceivablePaymentsAsync(selected invoices)
+
+InvoiceWorkflowService:
+  - LoadCreateInvoicePageAsync → contractor names (active only), jobs list
+  - SearchInvoicesAsync(start, end) → Draft invoices in range; recalc AmountCost each
+  - PrepareInvoiceForConfirmation(invoice, contractors)
+  - AddDraftInvoiceAsync(invoice)
+  - SubmitInvoiceAsync(invoice, jobDescriptions) → Status Submitted, set dates
+
+StartJobWorkflowService:
+  - LoadAsync → jobs, companies, name lists
+  - LoadCompanyPropertiesAsync(companyName) → addresses list + property entities
+  - LoadPropertyDetailsAsync(companyName, propertyAddress) → gate/lock codes
+  - BuildDraftInvoice(StartJobRequest, jobs) → Invoice Status Draft, AmountCost summed
+
+HomeWorkflowService:
+  - LoadAsync → MyCompanyInfo via MyCompanyInfoService
+  - SaveAsync → validate then UpdateInfoResultAsync; updates GlobalState
+
+MyCompanyInfoService: get/update company profile record.
+
+ImportExportService:
+  - GetDatabasePath()
+  - CreateDatabaseBackupAsync → byte[] of SQLite file (WAL checkpoint first)
+  - RestoreFromDatabaseFileAsync(bytes) → validate SQLite header; replace db file;
+    backup current to timestamped .backup_* file; clear connection pool
+  - JSON backup/restore of entity graphs (companies, contractors, invoices, jobs)
+  - ImportCompaniesFromCsv, ImportPropertiesFromCsv, ImportSalesFromCsv (see §11)
+  - Static event DataRefreshRequested for UI refresh after import
+
+GlobalStateService: SetCompanyInfo, SetCurrentSection, OnChange event.
+
+ModelValidationService: Validate(object) using DataAnnotations.
+
+IUpdateService (GitHubUpdateService implementation):
+  - CheckForUpdatesAsync, DownloadUpdateAsync, InstallUpdateAsync,
+    DownloadAndInstallAsync, CreateBackupAsync, RollbackAsync
+  - Events: DownloadProgressChanged, UpdateAvailable, StateChanged
+  - CurrentVersion from app; config: repository owner/name, check on startup
+  - Supporting: UpdateSchedulerService, BackgroundDownloadService,
+    UpdateCacheService, BandwidthThrottlingService, UpdateAnalyticsService,
+    ApplicationRestartService, UpdateStartupService
+
+NotificationHelper: wraps Radzen notifications (optional convenience).
+
+ApplicationDataInitializationService: EnsureDefaultsAsync (see §7.7).
+
+================================================================================
+9. PAGE-BY-PAGE FUNCTIONAL SPECIFICATION
+================================================================================
+
+9.1 HOME (/)
+  UI: EditForm with RadzenTextBox fields for MyCompanyInfo (Name, Phone, Email,
+      Address, LicenseNumber, Zip). "Save Changes" submit button. ValidationSummary.
+  Load: HomeWorkflowService.LoadAsync; on failure empty form + error toast.
+  Save: validates required fields; success/error notification.
+
+9.2 START JOB (/startjob)
+  Section set: "Operations".
+  Title: "Start Work Order" with description icon.
+  TodaysDate defaults to today at component initialization.
+  Form fields:
+    - TodaysDate, WorkDate (RadzenDatePicker MM/dd/yyyy) required
+    - Company Name: EditableDropdown over company names (case-insensitive
+      StartsWith filter). Unknown name triggers the "company not found" flow
+      (see §7.6).
+    - Property Address: EditableDropdown (loads on company change)
+    - Unit# required (RadzenTextBox)
+    - BedroomSize, BathroomSize (RadzenNumeric)
+    - Gate Code, Lock Box, Garage Remote Code, Work Order, Special Note
+    - Job Description section: dynamic list of job type rows; each row has an
+      EditableDropdown from the job catalog; "Add Another Option" button appends
+      a row; per-row Remove button.
+  Submit ("Submit" button) flow:
+    1. SelectedJobTypes is built from each row's JobType string.
+    2. StartJobWorkflowService.BuildDraftInvoice(request, jobs) builds a draft
+       Invoice (Status = Draft, AmountCost = sum of catalog prices for selected
+       job names). Validation failure shows an error notification and aborts.
+    3. DialogService opens StartJobConfirmDialogComponent ("Job Confirmation")
+       with the draft invoice as parameter.
+    4. If the dialog returns true (Submit pressed inside the dialog), the page
+       navigates to /createinvoice.
+    5. If the dialog returns false (Cancel/Back), the user stays on Start Job
+       with form state preserved.
+
+9.3 ACTIVE JOBS (/activejobs)
+  Filters: Start Date, End Date, Company dropdown (includes View All).
+  Loads InvoiceDashboardService.LoadActiveAsync (Draft status).
+  RadzenDataGrid: invoice columns (number, dates, company, address, amounts, etc.).
+  Export buttons: PDF, Excel (see §12). Uses filtered invoice set.
+
+9.4 CREATE INVOICE (/createinvoice)
+  Section set: "Billing".
+  Filters: Start Date, End Date (native <input type="date">); Submit button
+  calls InvoiceWorkflowService.SearchInvoicesAsync and populates the grid.
+  Grid: RadzenDataGrid of Draft invoices; columns Invoice Number (Id+10000),
+  WorkDate (MM/dd/yyyy), Unit, CompanyName, PropertyAddress, AmountCost.
+  RowSelect opens CreateInvoiceConfirmDialogComponent as a modal.
+  Empty state: if hasSearched && no results → blue info alert "No draft
+  invoices found in the selected date range. Start a new job to create a
+  draft invoice."
+
+  The "confirmation" dialog (/createinvoice-confirm-dialog) is a full editable
+  form (EditForm + DataAnnotationsValidator) inside RadzenCard(s), not a
+  read-only review:
+    - Editable fields: TodaysDate, WorkDate (RadzenDatePicker), CompanyName,
+      PropertyAddress, Unit, SizeBedroom/SizeBathroom (RadzenNumeric 0-10),
+      WorkOrder, Contractor (EditableDropdown from active contractors only),
+      SpecialNote, GateCode, LockBox, GarageRemoteCode.
+    - Job Description section: deserializes JobDescriptionChoice JSON into
+      editable list. For each line: RadzenTextBox (description) + RadzenNumeric
+      (price, looked up from the jobs catalog passed as parameter by matching
+      Description + SizeBedroom + SizeBathroom). Add/Remove buttons; price
+      change triggers recalc of AmountCost.
+    - AmountCost is also directly editable (RadzenNumeric).
+    - Buttons: "Back" (DialogService.Close(false)), "Submit" (valid submit →
+      InvoiceWorkflowService.SubmitInvoiceAsync(invoice, jobDescriptions list)
+      which sets Status=Submitted, InvoiceCreatedDate=now, persists, returns
+      success). On success the dialog closes with true and the parent navigates
+      or refreshes.
+  The jobs catalog and active contractor list are loaded by
+  InvoiceWorkflowService.LoadCreateInvoicePageAsync and passed as parameters
+  to the dialog.
+
+9.5 ACCOUNTS RECEIVABLE (/accountsreceivable)
+  Section set: "Finance".
+  Filter: single Company dropdown (RadzenDropDown) including the "View All" option.
+  Loading states are explicit in the UI:
+    - "Loading accounts receivable..." (info alert) while isLoading
+    - red danger alert if load fails (loadErrorMessage)
+    - secondary alert "No receivable invoices match the current filters." if
+      hasLoaded and the filtered list is empty
+  Grid: receivable invoices (AmountCost > AmountPaid1 + AmountPaid2), paging
+  size 10, sortable, column resize, column reorder.
+  Columns include: Invoice Number, Work Date, Company Name, Amount Cost, a
+  Select checkbox, "1st Payment" composite cell, "2nd Payment" composite cell,
+  Special Note, Property Address, Unit, Gate Code, Lock Box, Bedrooms,
+  Bathrooms, Work Order, Job Description, Contractor Name.
+  Per-row Select checkbox toggles editability of the payment fields. When
+  checked, the 1st / 2nd Payment cells render stacked RadzenNumeric (amount) +
+  RadzenDatePicker (date, MM/dd/yyyy) + RadzenTextBox (check number).
+  Buttons: Done (apply payments), Download to PDF, Download to Excel; all
+  disabled while isLoading.
+  "Done" calls InvoiceDashboardService.ApplyReceivablePaymentsAsync with the
+  currently selected invoices (see §7.5 for batch validation rules).
+  Column ordering is persisted to localStorage under the key
+  "AccountReceivableColumnOrder" (comma-separated column titles); on load the
+  grid restores the saved order when present.
+
+9.6 AGING REPORTS (/agingreports)
+  Data source: InvoiceService.GetInvoicesReceivable() (balance due > 0).
+  Wrapper type exInvoice extends Invoice; on construct:
+    DaysOverdue = (Today - (InvoiceCreatedDate ?? Today)).Days
+  Filters:
+    - Company dropdown (includes "View All")
+    - Supervisor dropdown: when not View All, filter invoices where CompanyName
+      matches the selected supervisor's parent Company.Name
+    - Date range: when BOTH startDate and endDate set, filter WorkDate inclusive
+  ApplyFilters rebuilds exInvoice list after each filter change.
+  Grid columns: invoice #, WorkDate, Company, AmountCost, DaysOverdue, payments,
+    property fields, job description, contractor, TodaysDate.
+  Export PDF/Excel on filteredInvoices (PDF uses saveAsPDFFallback pattern).
+
+9.7 SALES (/sales)
+  Section set: "Finance".
+  Filter row (4 columns): Start Date, End Date (RadzenDatePicker MM/dd/yyyy),
+  Company dropdown, Address dropdown (Address list rebuilt when company changes).
+  Loading states: info alert while loading; danger alert on error; secondary
+  alert "No sales invoices match the current filters." when empty.
+  Grid: submitted invoices (Status == Submitted), paging size 10, sortable,
+  column reorder, column resize, default column width 140px.
+  Columns include: a per-row Select checkbox, Invoice Number (Id+10000), Work
+  Date (MM/dd/yyyy), Company, Property Address, Work Order, Price (AmountCost),
+  Amount Paid1, Date Paid1, Amount Paid2, Date Paid2, Check Number, Unit,
+  Bedrooms, Bathrooms, Job Description, Contractor Name.
+  Selecting a row may open SalesDetail (/sales-detail-dialog) for row detail.
+  Buttons: Download to PDF, Download to Excel.
+
+9.8 PAYROLL (/payroll)
+  Title icon: money. RadzenCard container.
+  Filters: Start Date, End Date (RadzenDatePicker), Contractor dropdown.
+  Data source: InvoiceService.GetInvoicesSales() (submitted invoices), then
+  filtered by selected contractor and date range.
+  The grid is hidden until a contractor is selected. When shown:
+    Columns: Work Date (MM/dd/yyyy), Invoice Number (Id+10000), Invoice Total
+             (AmountCost), Paid to Contractor (AmountPaid1), Paid to Contractor2
+             (AmountPaid2). Paging size 10, column resize.
+  Buttons: Download to PDF, Download to Excel (export uses an off-screen
+  "pdf-content-0" template grid for the PDF layout).
+
+9.9 CONTRACTOR JOBS (/contractorjobs)
+  Title icon: construction. RadzenCard container.
+  Filter: SINGLE "Date to Search" RadzenDatePicker (MM/dd/yyyy). There is no
+  end-date input on this page.
+  Data source: InvoiceService.GetInvoicesSales() (submitted invoices), filtered
+  to rows whose WorkDate matches the selected date.
+  Grid columns: Work Date, Invoice Number (Id+10000), Contractor, Property,
+  Unit, Gate Code, LockBox Code, Job Description, Work Order, Price (AmountCost).
+  Paging size 10, sortable, column resize.
+  Buttons: Download to PDF, Download to Excel; PDF uses an off-screen
+  "pdf-content-0" template grid (Company Name, Work Date, Invoice Number, Work
+  Order, Amount Cost, Amount Paid1, Date Paid1, Amount Paid2, Date Paid2).
+
+9.10 CONTACTS (/editviewcontacts)
+  Radio: Company | Contractor.
+  Embeds EditCompany or EditContractor component.
+
+9.11 EDIT COMPANY (/editcontacts/editcompany) — also embedded in /editviewcontacts
+  Select an existing company via EditableDropdown OR enter Add Company mode.
+  Top-level fields (RadzenTextBox bound): CompanyID, Name, Owner, Phone, Email,
+  Address, City, Zip, SpecialNote. Delete-company button when editing.
+  Supervisors section (collapsible):
+    Each supervisor row has an expand/collapse toggle button (icon "add" when
+    collapsed, "remove" when expanded). Header shows the supervisor's name in
+    bold. Expanding reveals Name, Phone, Email (3-column RadzenTextBox row) and
+    a red Delete supervisor button.
+    Properties under each supervisor are also individually expand/collapsible
+    using the same add/remove toggle button pattern. Each property header shows
+    the property Name and an IsActive RadzenCheckBox. Expanding reveals a grid
+    of fields: Name, Address, City, Zip, ManagerName, ManagerPhone, ManagerEmail,
+    GateCode, GarageRemoteCode, LockBox, Note (SpecialNote), and a red Delete
+    property button.
+    "Add Property" button under each supervisor's property list appends a new
+    Properties row (in-memory) for editing before save.
+    "Add Supervisor" button at the bottom of the supervisors section appends a
+    new Supervisor row (in-memory).
+  Bottom row: Cancel (Danger) and Submit (Success) buttons (full-width each).
+  Save persists the company plus all nested supervisor and properties changes
+  through CompanyService / SupervisorService / PropertiesService.
+
+9.12 EDIT CONTRACTOR (/editcontacts/editcontractor)
+  Dropdown to select an existing contractor or switch to add-new mode.
+  Form fields mirror the Contractor model (Name required; LicenseNumber,
+  SocialSecurityNumber, ContractorID, PayrollPercent, CellPhone, Email,
+  Address, City, Zip, SpecialNote, IsActive).
+  Save / Delete buttons; IsActive checkbox controls whether the contractor
+  appears in active-contractor pickers (e.g. Create Invoice).
+
+9.13 ADD CONTACTS HUB (/addcontacts)
+  Not a wizard. The page renders a horizontal RadzenRadioButtonList with five
+  options and embeds the matching child component inline below the radio group:
+      1 = Company     → <AddCompany />
+      2 = Property    → <AddProperty />
+      3 = Supervisor  → <AddSupervisor />
+      4 = Manager     → <AddManager />
+      5 = Contractor  → <AddContractor />
+  Default selected value is 1 (Company). Each child page is also directly
+  navigable at /addcontacts/addcompany etc.
+
+9.13a ADD COMPANY (/addcontacts/addcompany)
+  Standalone form. UNLIKE the rest of the app, this page uses plain Bootstrap
+  HTML inputs (<input type="number">, <input type="text">, <input type="email">,
+  <textarea>) inside an EditForm with DataAnnotationsValidator, not Radzen
+  components. Fields: CompanyID (required, 4-digit 1000–9999), Name (required),
+  Owner, Phone (tel), Email (email), Address, City, Zip, SpecialNote (textarea
+  rows=3). Buttons: Cancel (returns to /), Submit. Successful save shows a
+  green notification, clears the form for the next entry, and stays on the
+  page. Failure shows a red notification with the service error message.
+
+9.14 JOB CATALOG (/newjobs)
+  Title: "New Jobs".
+  Header row: Job Description | Bedrooms | Bathrooms | Price | Actions
+  (col widths roughly 6/1/1/2/2).
+  Existing jobs are rendered with a lightgreen row background; inline RadzenTextBox
+  for description and RadzenNumeric for bedrooms/bathrooms/price; per-row red
+  Delete button.
+  New (unsaved) rows are appended via "Add" (lightpink row background) with the
+  same inline editors.
+  "Done" (Primary button) replaces the entire JobDescription table using
+  JobDescriptionService.ReplaceAll(existing+new). Per-row Delete simply removes
+  the row from the in-memory list; the change persists when Done is pressed.
+
+9.15 IMPORT / EXPORT (/importexport)
+  RadzenTabs:
+    Tab "Backup & Restore":
+      - Create Backup: downloads .db bytes via file picker / save
+      - Quick Backup: saves to last used directory (Preferences key LastBackupDirectory)
+      - Restore: upload .db, confirm, RestoreFromDatabaseFileAsync
+    Tab "Import Companies": CSV template download, upload CSV, import
+    Tab "Import Properties": CSV with supervisor linkage
+    Tab "Import Sales": CSV invoice/sales rows
+  Success/error RadzenAlert per operation.
+  DataRefreshRequested event signals other pages to reload if subscribed.
+
+9.16 UPDATE SETTINGS (/settings/updates)
+  Shows current version, Check for Updates button, last check time.
+  Configuration: repository, enable check on startup, frequency, etc. (UpdateConfiguration)
+  Links or embeds update dashboard (/settings/updates/dashboard) for progress/history.
+
+9.17 UPDATE DASHBOARD (/settings/updates/dashboard)
+  Visualize update state, download progress, install, rollback options per IUpdateService.
+
+9.18 PROFILE (/profile)
+  Authentication has been removed from the product. The page renders a single
+  RadzenCard with the heading "Profile" and the body text:
+    "Profile management is no longer available since authentication has been
+     removed from the application."
+    "All users now have full access to all features without needing to log in."
+  No form, no actions.
+
+9.19 LOGOUT (/logout)
+  Authentication has been removed. The page contains no UI; OnInitializedAsync
+  immediately calls NavigationManager.NavigateTo("/", forceLoad: true), so
+  visiting /logout simply reloads the app at the home page.
+
+9.20 ERROR (/Error)
+  Standard error display page for unhandled route errors.
+
+9.21 SYSTEM TESTS (/test)  [nav entry only — body omitted by exclusion policy]
+  Reachable from the sidebar under "System" with the bug_report icon. The page
+  is a runtime self-diagnostic dashboard for the user (database connection
+  status, update service status, sample queries against CompanyService and
+  InvoiceService, an in-page test log). Per the document scope (no testing,
+  no logging), the functional behavior of this page is intentionally not
+  reproduced here; a re-implementation may omit /test entirely without losing
+  business functionality.
+
+9.22 LEGACY / ORPHAN (/counter, /weather, /jobdescription, /test (body), FunctionsList)
+  Blazor template demo pages, an unfinished /jobdescription scratch page, and
+  /MajorFunctions/FunctionsList (hardcoded dropdown of demo company names).
+  Not reachable from the sidebar (except /test) and not part of any business
+  workflow. Safe to omit in a re-implementation.
+
+9.23 QUICKGRID USAGE
+  A minority of finance pages (AgingReports, ContractorJobs, Payroll, Sales)
+  import Microsoft.AspNetCore.Components.QuickGrid in addition to or instead
+  of RadzenDataGrid for certain grids. The visual and behavioral parity target
+  is the RadzenDataGrid pattern described elsewhere; QuickGrid usage is an
+  implementation detail that may be replaced with Radzen equivalents without
+  loss of function.
+
+================================================================================
+10. SHARED UI COMPONENTS
+================================================================================
+
+10.1 EditableDropdown
+  - Wraps RadzenAutoComplete (FilterCaseSensitivity.CaseInsensitive,
+    FilterOperator.StartsWith, MinLength=0, Placeholder "Type first letters to
+    search...") + absolute-positioned right-side button (RadzenIcon
+    "expand_more") that opens SelectItemDialog.
+  - DialogOptions: Width="300px", Height="300px", CloseDialogOnOverlayClick=true.
+  - On dialog result or input change, invokes SelectedItemChanged with the string
+    value. Parent typically does two-way binding via SelectedItem + EventCallback.
+  - Data (List<string>) supplied by parent; empty list hides the picker button.
+
+10.2 SelectItemDialog
+  - Dialog listing all strings; selection returns to parent.
+
+10.3 CustomErrorBoundary
+  - Wraps Router and page content.
+  - On exception: show alert-danger card:
+      Heading "Something went wrong" with warning icon.
+      Message: refresh or contact support.
+      Optional Show Details toggle reveals exception.Message.
+      Buttons: Try Again (Recover), Go to Dashboard (/), Show/Hide Details.
+  - Deduplicates identical exception type+message repeats.
+
+10.4 CreateInvoiceConfirmDialog / StartJobConfirmDialog
+  - Modal confirmation of invoice fields before save/submit.
+
+10.5 UpdateNotification
+  - Reusable banner component (UpdateNotification.razor) that subscribes to
+    IUpdateService.UpdateAvailable event.
+  - When visible and UpdateInfo.IsUpdateAvailable: shows icon, "Update
+    Available" heading, version info, optional "Required Update" / "Pre-release"
+    badges.
+  - Actions: Primary "Download" button (disabled while downloading), secondary
+    "Release Notes", and (if not mandatory) "Skip this version" (calls
+    UpdateService.SkipVersionAsync) and "Remind me later".
+  - Parameters: UpdateInfo, IsVisible, EventCallbacks for OnDownload,
+    OnViewReleaseNotes, OnSkip, OnDismiss.
+  - Typically placed on pages or in a layout when update checks are enabled.
+
+================================================================================
+11. IMPORT, EXPORT, BACKUP, AND RESTORE
+================================================================================
+
+11.1 Database backup
+  - Raw SQLite file copy after PRAGMA wal_checkpoint(TRUNCATE).
+  - Filename pattern: user-chosen or app.db
+
+11.2 Database restore
+  - Validates "SQLite format 3" header.
+  - Backs up current file to app.db.backup_yyyyMMdd_HHmmss
+  - Replaces main db; deletes wal/shm sidecars; requires app restart or reconnect
+
+11.3 JSON backup/restore (if exposed in UI beyond .db)
+  - Serializes Companies, Contractors, Invoices, JobDescriptions collections
+  - Restore merges/replaces per service implementation
+
+11.4 CSV Import Companies
+  Required column: Name
+  Optional: Owner, Phone, Email, Address, City, Zip, SpecialNote
+  Template downloadable from UI.
+
+11.5 CSV Import Properties
+  Required: Name; SupervisorName OR SupervisorId
+  Optional: Address, City, Zip, GateCode, GarageRemoteCode, ManagerName,
+  ManagerPhone, ManagerEmail, LockBox, SpecialNote
+
+11.6 CSV Import Sales
+  Required: WorkDate, CompanyName, PropertyAddress
+  Optional: Unit, SizeBedroom, SizeBathroom, WorkOrder, JobDescriptionChoice,
+  ContractorName, AmountCost, payment fields, notes, gate/lock/garage fields
+
+================================================================================
+12. CLIENT-SIDE REPORT GENERATION (PDF / EXCEL)
+================================================================================
+
+Loaded in wwwroot/index.html:
+
+Libraries (loaded via CDN in wwwroot/index.html):
+  - SheetJS xlsx 0.18.5 (full)
+  - jsPDF 2.5.1 UMD + jspdf-autotable 3.5.25
+  - html2pdf.js 0.9.2
+
+Exposed window.* functions (must be callable from MAUI WebView / Blazor JS interop):
+
+downloadFile(filename, content, contentType)
+  - Creates Blob, triggers <a download>.
+
+saveAsExcel(data)
+  - data: array of plain objects with uniform keys.
+  - Creates workbook with sheet name "Invoices"; writes "Invoices.xlsx".
+
+setPdfData(data)
+  - Stores the array on window.pdfData (used by fallback).
+
+saveAsPDF(data)
+  - Simple jsPDF + autoTable; title "Invoices"; columns from Object.keys of
+    first row.
+
+saveAsPDFByTemplate(templateID, filename, isLandscape=false)
+  - Looks up element by id; if missing/empty → saveAsPDFFallback.
+  - Uses html2pdf with: margin [10,10,10,10], jpeg quality 0.98, html2canvas
+    scale=2, useCORS/allowTaint, a4 format (landscape or portrait), temp
+    off-screen container sized to page.
+  - On any error in the try block → falls back to saveAsPDFFallback.
+
+saveAsPDFFallback(templateID, filename, isLandscape=false)
+  - Requires window.pdfData (array of objects); alerts if missing.
+  - jsPDF a4 (orientation per flag); title = filename (underscores → spaces,
+    uppercased); timestamp line "Generated on: ..."; autoTable starting at Y=40.
+  - Styles: fontSize 8, cellPadding 2; headStyles fillColor [41,128,185] white
+    text; alternateRowStyles fillColor [245,245,245].
+  - Saves as {filename}_fallback.pdf.
+
+Blazor pages prepare export data as arrays of anonymous objects whose property
+names become the table columns (matching visible grid columns, with formatted
+invoice numbers, MM/dd/yyyy dates, etc.). Some pages (e.g. AR) always use the
+data-based fallback path for reliability when the template element is not
+guaranteed to be present or populated.
+
+A legacy parseJwt helper exists in the same script block but is not used by
+current business code.
+
+================================================================================
+13. APPLICATION UPDATE SYSTEM (GITHUB RELEASES)
+================================================================================
+
+Configuration is bound from the appsettings.json section named "UpdateSettings"
+(the constant UpdateConfiguration.SectionName is "UpdateSettings"; not
+"UpdateConfiguration"). Reference defaults shipped with the app:
+
+  RepositoryOwner       "rattaroaz"
+  RepositoryName        "DKSKMaui"
+  RepositoryPath        derived as "{RepositoryOwner}/{RepositoryName}"
+  Channel               "stable"
+  IncludePreReleases    false
+  CheckFrequency        Daily   (enum: Manual | Hourly | Daily | Weekly | Monthly)
+  AutoDownload          false
+  AutoInstall           false
+  CheckOnStartup        true
+  TimeoutSeconds        300
+  BackupRetentionDays   7
+  DownloadDirectory     "Updates"
+  BackupDirectory       "Backups"
+  GitHubToken           null   (optional, for private repos / rate limits)
+  NotificationsEnabled  true
+  PackagePattern        "*.zip"
+  VerifyChecksums       true
+  ChecksumFilePattern   "SHA256SUMS.txt"
+  MaxRetryAttempts      3
+  RetryDelaySeconds     5
+  Enabled               true
+  SourceMode            ReleaseOrPush   (enum: ReleaseOnly | PushOnly | ReleaseOrPush)
+  UpdateBranch          "main"
+  PushArtifactName      "dkskmaui-update-package"
+  LastCheckTime         null   (runtime-updated)
+  SkippedVersion        null   (runtime-updated when user skips a version)
+
+IUpdateService state machine (enum UpdateState):
+  Idle, CheckingForUpdates, UpdateAvailable, Downloading, Verifying,
+  DownloadComplete, Installing, InstallComplete, RestartRequired, Error,
+  RollingBack
+
+UpdateInfo carries Version, CurrentVersion, SourceType ("release" | "push"),
+BuildIdentifier, CommitSha, ReleaseDate, ReleaseNotes, DownloadUrl,
+PackageSize, Checksum, IsMandatory, IsPreRelease, Channel, ReleaseName,
+ReleaseId, AssetId, FileName. IsUpdateAvailable is true if either
+Version > CurrentVersion OR BuildIdentifier differs from CurrentBuildIdentifier
+(case-insensitive).
+
+Flow:
+  - On startup (if CheckOnStartup) the scheduler probes GitHub for a newer
+    release/asset, or for a newer push artifact if SourceMode allows.
+  - Download the release asset / push artifact with progress events
+    (DownloadProgress with bytes, total, speed, percentage).
+  - Optionally verify against the SHA256SUMS.txt sidecar (VerifyChecksums).
+  - Install to the application directory; may invoke ApplicationRestartService
+    to restart the app after install.
+  - On install failure, RollbackAsync restores from the timestamped backup
+    folder under BackupDirectory (kept BackupRetentionDays days).
+  - UpdateAnalyticsService persists a local statistics file (checks attempted,
+    downloads completed, installs completed, failures).
+  - Push mode: when SourceMode includes Push, BackgroundDownloadService and
+    UpdateCacheService pre-fetch the artifact named PushArtifactName from the
+    given UpdateBranch.
+
+UI surfaces:
+  - /settings/updates  — current version, check-for-updates, configuration
+  - /settings/updates/dashboard — live progress, history, install / rollback
+  - Optional UpdateNotification banner shown when an update is available
+
+================================================================================
+14. PERSISTENCE, STARTUP, AND CONFIGURATION
+================================================================================
+
+Startup sequence (conceptual):
+  1. Configure SQLite compatibility switch for .NET 10 DateTime handling.
+  2. Load appsettings.json from the app base directory if present. The only
+     business-relevant section is "UpdateSettings" (see §13); the "Serilog"
+     and "Logging" sections are intentionally out of scope for this document.
+  3. Register all DI services. Reference lifetimes:
+       Singleton: GlobalStateService, IUpdateService and all update helpers,
+                  ApplicationRestartService.
+       Scoped:    All page-facing services (CompanyService, InvoiceService,
+                  InvoiceDashboardService, InvoiceWorkflowService,
+                  InvoicePresentationService, StartJobWorkflowService,
+                  HomeWorkflowService, ContractorService, PropertiesService,
+                  SupervisorService, JobDescriptionService, MyCompanyInfoService,
+                  ImportExportService, ModelValidationService).
+       DbContext: AppDbContext scoped, SQLite provider.
+  4. Build the MAUI app with a BlazorWebView pointed at the Blazor Components
+     root.
+  5. DatabaseStartup.InitializeDatabase:
+       - Apply EF Core migrations.
+       - Ensure the unique CompanyID column / index exists on legacy databases
+         that predate the schema change.
+       - ApplicationDataInitializationService.EnsureDefaultsAsync inserts a
+         placeholder MyCompanyInfo row if none exists and prunes known demo
+         seed rows when the Invoice table is empty.
+  6. Register update services and run an optional startup update check when
+     UpdateSettings.CheckOnStartup = true.
+
+Database file path: {LocalApplicationData}/DKSKMaui/Database/app.db
+Legacy migration: if an older app.db exists under the app base directory's
+"Database" folder and the new LocalApplicationData path has no DB yet, the
+file is copied to the new location and the old file is renamed with a
+".backup" suffix.
+
+EF Core configuration in OnModelCreating:
+  - Unique index on Company.CompanyID.
+  - Supervisor.Company → Company (one-to-many, cascade delete).
+  - Properties.Supervisor → Supervisor (one-to-many, cascade delete).
+  - DbSet aliases: Companies → Company, JobDescriptions → JobDescription
+    (lets code use either name).
+
+================================================================================
+15. ERROR HANDLING (USER-VISIBLE ONLY)
+================================================================================
+
+- Form validation: DataAnnotations + ValidationSummary + ValidationMessage per field.
+- Service failures: OperationResult.Message shown via Radzen Notification (Error).
+- CustomErrorBoundary catches render/event exceptions in UI subtree.
+- Blazor error UI bar at bottom (light yellow) for fatal Blazor errors with Reload link.
+- Import/restore/backup: inline RadzenAlert success/danger on same page.
+
+Do not replicate internal diagnostic/monitoring pipelines; only user-facing behavior above.
+
+================================================================================
+16. REPRODUCTION CHECKLIST FOR IMPLEMENTERS
+================================================================================
+
+[ ] SQLite schema with all entities, unique CompanyID, cascades, JsonIgnore on
+    Properties.Supervisor and Supervisor.Company back-references.
+[ ] InvoiceStatus enum values (Draft=0, Submitted=1, Paid=2) and the exact
+    query filters in §6.
+[ ] Invoice number display = Id + 10000.
+[ ] JobDescriptionChoice JSON array → sum catalog prices.
+[ ] Payment total validation on Invoice.Validate AND in AR batch apply.
+[ ] All sidebar routes in the order listed in §4, including the "System Tests"
+    nav entry (target page body may be omitted).
+[ ] Sidebar gradient (rgb(5,39,103) → #3a0647), 250px width, 641px breakpoint.
+[ ] EditableDropdown autocomplete + SelectItemDialog picker pattern.
+[ ] Start Job: company-not-found Confirm → EnsureCompanyByName allocates
+    next CompanyID 1000–9999; on confirm dialog success, navigate to
+    /createinvoice.
+[ ] Create Invoice → date-range draft search → confirm dialog → Submitted.
+[ ] AR checkboxes + dual payment columns + Done = batch apply.
+[ ] AR localStorage column-order persistence ("AccountReceivableColumnOrder").
+[ ] Sales (4-column filter row + Select column), Active Jobs, Payroll
+    (date range + contractor; grid hidden until contractor selected),
+    Contractor Jobs (single date picker), Aging Reports (date range applies
+    only when BOTH dates set; supervisor filter cascades from company).
+[ ] Company → Supervisor → Property hierarchy CRUD with per-row expand/collapse
+    add/remove toggles in EditCompany.
+[ ] Job Catalog replace-all save with lightgreen (existing) and lightpink
+    (unsaved) row backgrounds.
+[ ] Import/Export tabs: .db backup/restore + Companies/Properties/Sales CSV
+    imports; CSV templates downloadable per tab.
+[ ] PDF/Excel JS APIs with fallback PDF table styling (header #2980b9,
+    alternating row #f5f5f5, font size 8).
+[ ] GitHub update check/download/install with the full UpdateSettings defaults
+    in §13; section name in appsettings.json is "UpdateSettings".
+[ ] GlobalState section labels match §3.5; sidebar shows section + company.
+[ ] MyCompanyInfo edit form is the Home page.
+[ ] /profile is informational only; /logout redirects to "/" (auth removed).
+[ ] Notifications for all OperationResult outcomes; CustomErrorBoundary wraps
+    routed content with Try Again / Go to Dashboard / Show Details actions.
+
+END OF CLEANROOM SPECIFICATION
+================================================================================
