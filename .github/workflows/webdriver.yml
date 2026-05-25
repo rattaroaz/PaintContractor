@@ -1,0 +1,78 @@
+name: WebDriver (real Tauri runtime)
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: webdriver-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  webdriver:
+    name: WebDriverIO (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev webkit2gtk-driver xvfb
+
+      - name: Install msedgedriver (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool --locked
+          powershell -ExecutionPolicy Bypass -File webdriver/scripts/setup-msedgedriver.ps1
+          echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ matrix.os }}-wdio-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.os }}-wdio-cargo-
+
+      - run: npm ci
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+
+      - name: Run WebDriver suite (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run npm run test:webdriver
+
+      - name: Run WebDriver suite (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run test:webdriver
+
+      - name: Run destructive WebDriver specs (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run npm run test:webdriver:destructive
+
+      - name: Run destructive WebDriver specs (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run test:webdriver:destructive

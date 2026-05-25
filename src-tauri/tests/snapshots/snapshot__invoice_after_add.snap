@@ -1,0 +1,30 @@
+---
+source: tests/snapshot.rs
+expression: saved
+---
+{
+  "id": "[id]",
+  "todays_date": "2026-05-25",
+  "work_date": "2026-05-20",
+  "company_name": "Acme",
+  "property_address": "1 Main",
+  "unit": "A",
+  "gate_code": null,
+  "lock_box": null,
+  "size_bedroom": 2,
+  "size_bathroom": 2,
+  "work_order": "WO-1",
+  "job_description_choice": "[\"Paint\"]",
+  "contractor_name": "Alex",
+  "amount_cost": 100,
+  "amount_paid1": 0,
+  "date_paid1": null,
+  "check_number1": null,
+  "amount_paid2": 0,
+  "date_paid2": null,
+  "check_number2": null,
+  "invoice_created_date": "2026-05-25",
+  "special_note": null,
+  "garage_remote_code": null,
+  "status": 0
+}

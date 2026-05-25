@@ -5,10 +5,27 @@ use std::sync::Mutex;
 static DB: Mutex<Option<Connection>> = Mutex::new(None);
 
 pub fn db_path() -> PathBuf {
+    if let Ok(custom) = std::env::var("PAINT_CONTRACTOR_DB_PATH") {
+        let path = PathBuf::from(custom);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        return path;
+    }
     let base = dirs::data_local_dir().unwrap_or_else(std::env::temp_dir);
     let dir = base.join("PaintContractor").join("Database");
     std::fs::create_dir_all(&dir).ok();
     dir.join("app.db")
+}
+
+/// Resets the global connection so a subsequent `init_db()` reopens against
+/// the (possibly env-overridden) path. Hidden from documentation because it is
+/// only intended for use by the integration test suite.
+#[doc(hidden)]
+pub fn reset_for_tests() {
+    if let Ok(mut guard) = DB.lock() {
+        *guard = None;
+    }
 }
 
 pub fn init_db() -> Result<(), String> {
@@ -202,4 +219,50 @@ pub fn next_company_id(conn: &Connection) -> Result<i32, String> {
         }
     }
     Err("No available CompanyID in range 1000-9999".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::params;
+
+    fn fresh_conn() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE Company (Id INTEGER PRIMARY KEY AUTOINCREMENT, CompanyID INTEGER NOT NULL UNIQUE, Name TEXT NOT NULL);",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn next_company_id_returns_1000_when_empty() {
+        let conn = fresh_conn();
+        assert_eq!(next_company_id(&conn).unwrap(), 1000);
+    }
+
+    #[test]
+    fn next_company_id_skips_taken_ids() {
+        let conn = fresh_conn();
+        conn.execute(
+            "INSERT INTO Company (CompanyID, Name) VALUES (?1, ?2)",
+            params![1000, "Acme"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO Company (CompanyID, Name) VALUES (?1, ?2)",
+            params![1001, "Beta"],
+        )
+        .unwrap();
+        assert_eq!(next_company_id(&conn).unwrap(), 1002);
+    }
+
+    #[test]
+    fn db_path_respects_env_override() {
+        let tmp = std::env::temp_dir().join("paintcontractor_db_path_test.db");
+        std::env::set_var("PAINT_CONTRACTOR_DB_PATH", &tmp);
+        let resolved = db_path();
+        std::env::remove_var("PAINT_CONTRACTOR_DB_PATH");
+        assert_eq!(resolved, tmp);
+    }
 }

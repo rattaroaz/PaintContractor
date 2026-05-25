@@ -1,0 +1,156 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshot: DataTable > renders headers + rows in a stable order 1`] = `
+<DocumentFragment>
+  <div
+    class="data-table-wrapper"
+  >
+    <div
+      class="table-responsive"
+    >
+      <table
+        class="table table-striped table-hover table-sm"
+      >
+        <thead>
+          <tr>
+            <th>
+              ID
+            </th>
+            <th>
+              Name
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class=""
+          >
+            <td>
+              1
+            </td>
+            <td>
+              A
+            </td>
+          </tr>
+          <tr
+            class=""
+          >
+            <td>
+              2
+            </td>
+            <td>
+              B
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`snapshot: DataTable > renders the empty message when no rows are supplied 1`] = `
+<DocumentFragment>
+  <div
+    class="data-table-wrapper"
+  >
+    <div
+      class="table-responsive"
+    >
+      <table
+        class="table table-striped table-hover table-sm"
+      >
+        <thead>
+          <tr>
+            <th>
+              ID
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td
+              class="text-center text-muted"
+              colspan="1"
+            >
+              Nothing yet
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`snapshot: Modal > renders content when open 1`] = `
+<DocumentFragment>
+  <div
+    class="modal fade show d-block"
+    role="dialog"
+    tabindex="-1"
+  >
+    <div
+      class="modal-dialog"
+      role="document"
+    >
+      <div
+        class="modal-content"
+      >
+        <div
+          class="modal-header"
+        >
+          <h5
+            class="modal-title"
+          >
+            Confirm
+          </h5>
+          <button
+            aria-label="Close"
+            class="btn-close"
+            type="button"
+          />
+        </div>
+        <div
+          class="modal-body"
+        >
+          <div>
+            Body
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="modal-backdrop fade show"
+  />
+</DocumentFragment>
+`;
+
+exports[`snapshot: Modal > renders nothing when closed 1`] = `<DocumentFragment />`;
+
+exports[`snapshot: PageTitle > matches the saved snapshot with icon 1`] = `
+<DocumentFragment>
+  <h3
+    class="text-center mb-4 page-title"
+  >
+    <span
+      aria-hidden="true"
+      class="me-2 material-icon"
+    >
+      📈
+    </span>
+    Sales
+  </h3>
+</DocumentFragment>
+`;
+
+exports[`snapshot: PageTitle > matches the saved snapshot without icon 1`] = `
+<DocumentFragment>
+  <h3
+    class="text-center mb-4 page-title"
+  >
+    Sales
+  </h3>
+</DocumentFragment>
+`;

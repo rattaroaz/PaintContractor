@@ -1,0 +1,9 @@
+---
+source: tests/snapshot.rs
+expression: result
+---
+{
+  "success": true,
+  "message": "Updated 1 invoice(s). 1 fully paid.",
+  "data": "Updated 1 invoice(s). 1 fully paid."
+}

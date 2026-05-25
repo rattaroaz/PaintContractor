@@ -203,43 +203,41 @@ export function JobCatalogPage() {
   };
 
   const applyRowPatch = (idx: number, patch: Partial<JobRow>) => {
-    setRows((prev) => {
-      const current = prev[idx];
-      if (!current) return prev;
+    const prev = rowsRef.current;
+    const current = prev[idx];
+    if (!current) return;
 
-      if ("description" in patch) {
-        const nextDesc = String(patch.description).trim();
-        if (
-          nextDesc &&
-          isDuplicateDescription(nextDesc, prev, idx)
-        ) {
-          error("This job description already exists. Each description can only appear once.");
-          return prev;
-        }
+    if ("description" in patch) {
+      const nextDesc = String(patch.description).trim();
+      if (nextDesc && isDuplicateDescription(nextDesc, prev, idx)) {
+        error(
+          "This job description already exists. Each description can only appear once."
+        );
+        return;
       }
+    }
 
-      let next: JobRow = { ...current, ...patch };
+    let next: JobRow = { ...current, ...patch };
 
-      if (
-        "description" in patch ||
-        "size_bedroom" in patch ||
-        "size_bathroom" in patch
-      ) {
-        const desc = next.description.trim();
-        if (desc) {
-          const resolved = resolvePriceForCombo(
-            desc,
-            next.size_bedroom,
-            next.size_bathroom,
-            catalogRef.current
-          );
-          next = { ...next, id: resolved.id, price: resolved.price };
-        }
+    if (
+      "description" in patch ||
+      "size_bedroom" in patch ||
+      "size_bathroom" in patch
+    ) {
+      const desc = next.description.trim();
+      if (desc) {
+        const resolved = resolvePriceForCombo(
+          desc,
+          next.size_bedroom,
+          next.size_bathroom,
+          catalogRef.current
+        );
+        next = { ...next, id: resolved.id, price: resolved.price };
       }
+    }
 
-      scheduleSave(idx, next);
-      return prev.map((r, i) => (i === idx ? next : r));
-    });
+    scheduleSave(idx, next);
+    setRows((p) => p.map((r, i) => (i === idx ? next : r)));
   };
 
   const addRow = () => {

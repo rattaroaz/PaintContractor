@@ -1,0 +1,27 @@
+---
+source: tests/snapshot.rs
+expression: jobs
+---
+[
+  {
+    "id": "[id]",
+    "description": "Paint",
+    "size_bedroom": 1,
+    "size_bathroom": 1,
+    "price": 50
+  },
+  {
+    "id": "[id]",
+    "description": "Paint",
+    "size_bedroom": 2,
+    "size_bathroom": 2,
+    "price": 100
+  },
+  {
+    "id": "[id]",
+    "description": "Paint",
+    "size_bedroom": 3,
+    "size_bathroom": 2,
+    "price": 150
+  }
+]

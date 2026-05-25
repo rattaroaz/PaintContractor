@@ -67,8 +67,9 @@ export function HomePage() {
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
             <div className="col-md-6">
-              <label className="form-label">Name *</label>
+              <label htmlFor="home-name" className="form-label">Name *</label>
               <input
+                id="home-name"
                 className="form-control"
                 value={info.name}
                 onChange={(e) => setInfo({ ...info, name: e.target.value })}
@@ -76,8 +77,9 @@ export function HomePage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Phone *</label>
+              <label htmlFor="home-phone" className="form-label">Phone *</label>
               <input
+                id="home-phone"
                 className="form-control"
                 value={info.phone}
                 onChange={(e) => setInfo({ ...info, phone: e.target.value })}
@@ -85,8 +87,9 @@ export function HomePage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Email *</label>
+              <label htmlFor="home-email" className="form-label">Email *</label>
               <input
+                id="home-email"
                 type="email"
                 className="form-control"
                 value={info.email}
@@ -95,8 +98,9 @@ export function HomePage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">License Number *</label>
+              <label htmlFor="home-license" className="form-label">License Number *</label>
               <input
+                id="home-license"
                 className="form-control"
                 value={info.license_number}
                 onChange={(e) =>
@@ -106,8 +110,9 @@ export function HomePage() {
               />
             </div>
             <div className="col-12">
-              <label className="form-label">Address *</label>
+              <label htmlFor="home-address" className="form-label">Address *</label>
               <input
+                id="home-address"
                 className="form-control"
                 value={info.address}
                 onChange={(e) =>
@@ -117,8 +122,9 @@ export function HomePage() {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Zip *</label>
+              <label htmlFor="home-zip" className="form-label">Zip *</label>
               <input
+                id="home-zip"
                 className="form-control"
                 value={info.zip}
                 onChange={(e) => setInfo({ ...info, zip: e.target.value })}

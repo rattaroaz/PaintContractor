@@ -127,8 +127,23 @@ export function UpdateSettingsPage() {
   };
 
   useEffect(() => {
-    if (checkOnStartup && enabled) {
-      checkForUpdates();
+    let startup = checkOnStartup;
+    let en = enabled;
+    const saved = localStorage.getItem("UpdateSettings");
+    if (saved) {
+      try {
+        const cfg = JSON.parse(saved) as {
+          check_on_startup?: boolean;
+          enabled?: boolean;
+        };
+        if (cfg.check_on_startup != null) startup = cfg.check_on_startup;
+        if (cfg.enabled != null) en = cfg.enabled;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (startup && en) {
+      void checkForUpdates();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -28,6 +28,7 @@ const defaultColumns: ArColumn[] = [
     render: (inv, selected, onChange) => (
       <input
         type="checkbox"
+        aria-label={`Select invoice ${formatInvoiceNumber(inv.id)}`}
         checked={selected}
         onChange={(e) => {
           if (e.target.checked) onChange(inv);
@@ -241,8 +242,11 @@ export function AccountsReceivablePage() {
       <div className="card-section">
         <div className="row g-3 mb-3">
           <div className="col-md-4">
-            <label className="form-label">Company</label>
+            <label htmlFor="ar-company-filter" className="form-label">
+              Company
+            </label>
             <select
+              id="ar-company-filter"
               className="form-select"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
@@ -290,6 +294,7 @@ export function AccountsReceivablePage() {
                           {col.key === "select" ? (
                             <input
                               type="checkbox"
+                              aria-label={`Select invoice ${formatInvoiceNumber(inv.id)}`}
                               checked={sel}
                               onChange={(e) =>
                                 toggleSelect(inv.id, e.target.checked)

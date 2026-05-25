@@ -7,3 +7,14 @@ src-tauri/target/
 .DS_Store
 *.log
 app-icon.png
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+webdriver/webdriverio/node_modules/
+webdriver/drivers/
+msedgedriver.exe
+webdriver/webdriverio/msedgedriver.exe
+**/__snapshots__/*.new
+**/*.snap.new

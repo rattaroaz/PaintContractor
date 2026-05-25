@@ -1,0 +1,13 @@
+---
+source: tests/snapshot.rs
+expression: info
+---
+{
+  "id": 1,
+  "name": "",
+  "phone": "",
+  "email": "",
+  "address": "",
+  "zip": "",
+  "license_number": ""
+}

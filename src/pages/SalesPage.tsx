@@ -102,8 +102,11 @@ export function SalesPage() {
       <div className="card-section">
         <div className="row g-3 mb-3">
           <div className="col-md-3">
-            <label className="form-label">Start Date</label>
+            <label htmlFor="sales-start-date" className="form-label">
+              Start Date
+            </label>
             <input
+              id="sales-start-date"
               type="date"
               className="form-control"
               value={startDate}
@@ -111,8 +114,11 @@ export function SalesPage() {
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">End Date</label>
+            <label htmlFor="sales-end-date" className="form-label">
+              End Date
+            </label>
             <input
+              id="sales-end-date"
               type="date"
               className="form-control"
               value={endDate}
@@ -120,8 +126,11 @@ export function SalesPage() {
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">Company</label>
+            <label htmlFor="sales-company-filter" className="form-label">
+              Company
+            </label>
             <select
+              id="sales-company-filter"
               className="form-select"
               value={company}
               onChange={(e) => {
@@ -138,8 +147,11 @@ export function SalesPage() {
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Address</label>
+            <label htmlFor="sales-address-filter" className="form-label">
+              Address
+            </label>
             <select
+              id="sales-address-filter"
               className="form-select"
               value={address}
               onChange={(e) => setAddress(e.target.value)}

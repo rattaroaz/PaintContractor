@@ -1,0 +1,17 @@
+---
+source: tests/snapshot.rs
+expression: saved
+---
+{
+  "id": "[id]",
+  "company_id": 1000,
+  "name": "Acme",
+  "owner": "Jane",
+  "phone": null,
+  "email": null,
+  "address": null,
+  "city": null,
+  "zip": null,
+  "special_note": null,
+  "supervisors": []
+}

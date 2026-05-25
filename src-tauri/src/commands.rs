@@ -1162,3 +1162,67 @@ pub fn import_sales_csv(rows: Vec<CsvSalesRow>) -> Result<OperationResult<i32>, 
 pub fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn invoice_with(cost: i32, p1: i32, p2: i32) -> Invoice {
+        Invoice {
+            id: 0,
+            todays_date: "2026-05-25".into(),
+            work_date: "2026-05-20".into(),
+            company_name: "Acme".into(),
+            property_address: "1 Main".into(),
+            unit: "A".into(),
+            gate_code: None,
+            lock_box: None,
+            size_bedroom: 1,
+            size_bathroom: 1,
+            work_order: None,
+            job_description_choice: "[]".into(),
+            contractor_name: "Alex".into(),
+            amount_cost: cost,
+            amount_paid1: p1,
+            date_paid1: None,
+            check_number1: None,
+            amount_paid2: p2,
+            date_paid2: None,
+            check_number2: None,
+            invoice_created_date: None,
+            special_note: None,
+            garage_remote_code: None,
+            status: 0,
+        }
+    }
+
+    #[test]
+    fn validate_invoice_accepts_valid_payment_totals() {
+        assert!(validate_invoice(&invoice_with(100, 25, 25)).is_none());
+        assert!(validate_invoice(&invoice_with(100, 100, 0)).is_none());
+        assert!(validate_invoice(&invoice_with(0, 0, 0)).is_none());
+    }
+
+    #[test]
+    fn validate_invoice_rejects_overpayment() {
+        let err = validate_invoice(&invoice_with(50, 30, 25)).unwrap();
+        assert!(err.contains("Combined paid"));
+    }
+
+    #[test]
+    fn validate_invoice_rejects_missing_dates() {
+        let mut inv = invoice_with(100, 0, 0);
+        inv.work_date.clear();
+        assert!(validate_invoice(&inv).is_some());
+        let mut inv2 = invoice_with(100, 0, 0);
+        inv2.todays_date.clear();
+        assert!(validate_invoice(&inv2).is_some());
+    }
+
+    #[test]
+    fn get_app_version_returns_non_empty_semver_like_string() {
+        let v = get_app_version();
+        assert!(!v.is_empty());
+        assert!(v.chars().next().unwrap().is_ascii_digit());
+    }
+}

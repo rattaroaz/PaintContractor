@@ -77,8 +77,11 @@ export function ActiveJobsPage() {
       <div className="card-section">
         <div className="row g-3 mb-3">
           <div className="col-md-3">
-            <label className="form-label">Start Date</label>
+            <label htmlFor="active-start-date" className="form-label">
+              Start Date
+            </label>
             <input
+              id="active-start-date"
               type="date"
               className="form-control"
               value={startDate}
@@ -86,8 +89,11 @@ export function ActiveJobsPage() {
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">End Date</label>
+            <label htmlFor="active-end-date" className="form-label">
+              End Date
+            </label>
             <input
+              id="active-end-date"
               type="date"
               className="form-control"
               value={endDate}
@@ -95,8 +101,11 @@ export function ActiveJobsPage() {
             />
           </div>
           <div className="col-md-4">
-            <label className="form-label">Company</label>
+            <label htmlFor="active-company-filter" className="form-label">
+              Company
+            </label>
             <select
+              id="active-company-filter"
               className="form-select"
               value={company}
               onChange={(e) => setCompany(e.target.value)}

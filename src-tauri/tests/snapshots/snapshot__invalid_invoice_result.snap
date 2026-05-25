@@ -1,0 +1,8 @@
+---
+source: tests/snapshot.rs
+expression: res
+---
+{
+  "success": false,
+  "message": "TodaysDate and WorkDate are required."
+}

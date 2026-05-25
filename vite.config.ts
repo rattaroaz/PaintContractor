@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
+  // Relative asset paths so the packaged Windows .exe loads JS/CSS correctly.
+  base: "./",
   plugins: [react()],
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },

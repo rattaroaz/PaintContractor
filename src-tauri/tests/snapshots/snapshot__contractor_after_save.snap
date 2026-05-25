@@ -1,0 +1,19 @@
+---
+source: tests/snapshot.rs
+expression: saved
+---
+{
+  "id": "[id]",
+  "name": "Alex",
+  "license_number": "L",
+  "social_security_number": null,
+  "contractor_id": "AP-1",
+  "payroll_percent": "10",
+  "cell_phone": null,
+  "email": null,
+  "address": null,
+  "city": null,
+  "zip": null,
+  "special_note": null,
+  "is_active": true
+}
