@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { DataTable, type DataColumn } from "../components/DataTable";
+import { InvoiceDetailModal } from "../components/InvoiceDetailModal";
 import { PageTitle } from "../components/PageTitle";
 import { useGlobalState } from "../context/GlobalStateContext";
 import { useNotification } from "../context/NotificationContext";
@@ -28,6 +29,7 @@ export function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
     setCurrentSection("Finance");
@@ -178,7 +180,16 @@ export function SalesPage() {
 
         {!loading && filtered.length > 0 && (
           <>
-            <DataTable columns={columns} data={filtered} rowKey={(r) => r.id} />
+            <DataTable
+              columns={columns}
+              data={filtered}
+              rowKey={(r) => r.id}
+              onRowDoubleClick={setDetailInvoice}
+            />
+            <InvoiceDetailModal
+              invoice={detailInvoice}
+              onClose={() => setDetailInvoice(null)}
+            />
             <div className="mt-3 d-flex gap-2">
               <button
                 type="button"

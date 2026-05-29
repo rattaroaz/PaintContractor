@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { InvoiceDetailModal } from "../components/InvoiceDetailModal";
 import { PageTitle } from "../components/PageTitle";
 import { useGlobalState } from "../context/GlobalStateContext";
 import { useNotification } from "../context/NotificationContext";
@@ -144,6 +145,7 @@ export function AccountsReceivablePage() {
   const [columnOrder, setColumnOrder] = useState<string[]>(
     defaultColumns.map((c) => c.title)
   );
+  const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
     setCurrentSection("Finance");
@@ -293,7 +295,11 @@ export function AccountsReceivablePage() {
                   const row = getRow(inv);
                   const sel = selectedIds.has(inv.id);
                   return (
-                    <tr key={inv.id}>
+                    <tr
+                      key={inv.id}
+                      className="table-row-clickable"
+                      onDoubleClick={() => setDetailInvoice(row)}
+                    >
                       {orderedColumns.map((col) => (
                         <td key={col.key}>
                           {col.key === "select" ? (
@@ -317,6 +323,11 @@ export function AccountsReceivablePage() {
             </table>
           </div>
         )}
+
+        <InvoiceDetailModal
+          invoice={detailInvoice}
+          onClose={() => setDetailInvoice(null)}
+        />
 
         <div className="mt-3 d-flex flex-wrap gap-2">
           <button

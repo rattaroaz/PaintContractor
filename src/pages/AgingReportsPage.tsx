@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { DataTable, type DataColumn } from "../components/DataTable";
+import { InvoiceDetailModal } from "../components/InvoiceDetailModal";
 import { PageTitle } from "../components/PageTitle";
 import { useNotification } from "../context/NotificationContext";
 import type { Company, Invoice } from "../types";
@@ -24,6 +25,7 @@ export function AgingReportsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const [detailInvoice, setDetailInvoice] = useState<ExInvoice | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -153,7 +155,16 @@ export function AgingReportsPage() {
           <div className="alert alert-info">Loading…</div>
         ) : (
           <>
-            <DataTable columns={columns} data={filtered} rowKey={(r) => r.id} />
+            <DataTable
+              columns={columns}
+              data={filtered}
+              rowKey={(r) => r.id}
+              onRowDoubleClick={setDetailInvoice}
+            />
+            <InvoiceDetailModal
+              invoice={detailInvoice}
+              onClose={() => setDetailInvoice(null)}
+            />
             <div className="mt-3 d-flex gap-2">
               <button
                 type="button"

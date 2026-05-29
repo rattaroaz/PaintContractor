@@ -14,6 +14,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   rowKey: (row: T) => string | number;
   onRowClick?: (row: T) => void;
+  onRowDoubleClick?: (row: T) => void;
   rowClassName?: (row: T) => string;
   emptyMessage?: string;
 }
@@ -24,6 +25,7 @@ export function DataTable<T>({
   pageSize = 10,
   rowKey,
   onRowClick,
+  onRowDoubleClick,
   rowClassName,
   emptyMessage = "No records found.",
 }: DataTableProps<T>) {
@@ -96,12 +98,13 @@ export function DataTable<T>({
                 <tr
                   key={rowKey(row)}
                   className={[
-                    onRowClick ? "table-row-clickable" : "",
+                    onRowClick || onRowDoubleClick ? "table-row-clickable" : "",
                     rowClassName?.(row) ?? "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
                   onClick={() => onRowClick?.(row)}
+                  onDoubleClick={() => onRowDoubleClick?.(row)}
                 >
                   {columns.map((col) => (
                     <td key={col.key}>

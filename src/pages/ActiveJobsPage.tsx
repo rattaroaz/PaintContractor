@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { DataTable, type DataColumn } from "../components/DataTable";
+import { InvoiceDetailModal } from "../components/InvoiceDetailModal";
 import { PageTitle } from "../components/PageTitle";
 import { useNotification } from "../context/NotificationContext";
 import type { Invoice } from "../types";
@@ -21,6 +22,7 @@ export function ActiveJobsPage() {
   const [endDate, setEndDate] = useState("");
   const [company, setCompany] = useState(VIEW_ALL);
   const [loading, setLoading] = useState(true);
+  const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
     load();
@@ -126,6 +128,11 @@ export function ActiveJobsPage() {
               columns={columns}
               data={filtered}
               rowKey={(r) => r.id}
+              onRowDoubleClick={setDetailInvoice}
+            />
+            <InvoiceDetailModal
+              invoice={detailInvoice}
+              onClose={() => setDetailInvoice(null)}
             />
             <div className="mt-3 d-flex gap-2">
               <button
