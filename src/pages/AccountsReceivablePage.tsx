@@ -230,11 +230,16 @@ export function AccountsReceivablePage() {
     }
   };
 
-  const exportRows = () =>
-    filtered.map((inv) => {
+  const exportRows = () => {
+    const source =
+      selectedIds.size > 0
+        ? filtered.filter((inv) => selectedIds.has(inv.id))
+        : filtered;
+    return source.map((inv) => {
       const r = getRow(inv);
       return invoiceToExportRow(r, formatInvoiceNumber, formatDate);
     });
+  };
 
   return (
     <div className="container-fluid">
