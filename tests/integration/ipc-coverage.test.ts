@@ -39,6 +39,8 @@ const COMMAND_FOR_METHOD: Record<string, string> = {
   createDatabaseBackup: "create_database_backup",
   restoreDatabaseFile: "restore_database_file",
   ensureCompanyByName: "ensure_company_by_name",
+  getUpdateConfig: "get_update_config",
+  saveUpdateConfig: "save_update_config",
   getCompanyPropertyAddresses: "get_company_property_addresses",
   deleteSupervisor: "delete_supervisor",
   deleteProperty: "delete_property",

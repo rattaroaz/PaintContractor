@@ -1,5 +1,5 @@
 use log::{info, warn};
-use rusqlite::{Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, Transaction};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -130,6 +130,10 @@ pub fn init_db() -> Result<(), String> {
             GarageRemoteCode TEXT,
             Status INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS AppConfig (
+            Key TEXT PRIMARY KEY,
+            Value TEXT
+        );
         ",
     )
     .map_err(|e| e.to_string())?;
@@ -147,6 +151,26 @@ where
         .as_ref()
         .ok_or_else(|| "Database not initialized".to_string())?;
     f(conn)
+}
+
+/// Executes `f` inside a single SQLite transaction.
+/// On success the transaction is committed; on error it is rolled back
+/// and the original error is returned. This guarantees atomicity for
+/// multi-statement bulk operations (replace_all, CSV imports).
+pub fn with_transaction<F, T>(f: F) -> Result<T, String>
+where
+    F: FnOnce(&Transaction) -> Result<T, String>,
+{
+    with_conn(|conn| {
+        let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        let result = f(&tx);
+        if result.is_ok() {
+            tx.commit().map_err(|e| e.to_string())?;
+        } else {
+            let _ = tx.rollback();
+        }
+        result
+    })
 }
 
 fn ensure_defaults(conn: &Connection) -> Result<(), String> {
@@ -174,6 +198,26 @@ fn ensure_defaults(conn: &Connection) -> Result<(), String> {
             [],
         )
         .ok();
+    }
+
+    // Seed update config (safe defaults: disabled until user configures + publishes signed releases)
+    let cfg_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM AppConfig WHERE Key LIKE 'update.%'", [], |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+    if cfg_count == 0 {
+        let defaults = [
+            ("update.repository_owner", "rattaroaz"),
+            ("update.repository_name", "DKSKMaui"),
+            ("update.check_on_startup", "true"),
+            ("update.enabled", "false"),
+        ];
+        for (k, v) in defaults {
+            conn.execute(
+                "INSERT OR IGNORE INTO AppConfig (Key, Value) VALUES (?1, ?2)",
+                [k, v],
+            )
+            .ok();
+        }
     }
     Ok(())
 }
@@ -229,6 +273,53 @@ pub fn next_company_id(conn: &Connection) -> Result<i32, String> {
     Err("No available CompanyID in range 1000-9999".to_string())
 }
 
+// --- AppConfig (key-value) helpers for updater settings + future extensibility ---
+
+pub fn get_config_value(key: &str) -> Result<Option<String>, String> {
+    with_conn(|conn| {
+        let val: Option<String> = conn
+            .query_row(
+                "SELECT Value FROM AppConfig WHERE Key = ?1",
+                [key],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(|e| e.to_string())?;
+        Ok(val)
+    })
+}
+
+pub fn set_config_value(key: &str, value: &str) -> Result<(), String> {
+    with_conn(|conn| {
+        conn.execute(
+            "INSERT INTO AppConfig (Key, Value) VALUES (?1, ?2)
+             ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value",
+            [key, value],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    })
+}
+
+pub fn get_all_config_with_prefix(prefix: &str) -> Result<std::collections::HashMap<String, String>, String> {
+    with_conn(|conn| {
+        let mut stmt = conn
+            .prepare("SELECT Key, Value FROM AppConfig WHERE Key LIKE ?1")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([format!("{}%", prefix)], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        let mut map = std::collections::HashMap::new();
+        for row in rows {
+            let (k, v) = row.map_err(|e| e.to_string())?;
+            map.insert(k, v);
+        }
+        Ok(map)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,4 +364,7 @@ mod tests {
         std::env::remove_var("PAINT_CONTRACTOR_DB_PATH");
         assert_eq!(resolved, tmp);
     }
+
+    // Note: with_transaction unit tests are covered by the higher-level command integration
+    // tests (job_catalog + csv_import) which exercise the real global DB path.
 }

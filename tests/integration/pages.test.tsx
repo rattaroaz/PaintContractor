@@ -322,6 +322,12 @@ describe("UpdateSettingsPage", () => {
       JSON.stringify({ check_on_startup: false, enabled: false })
     );
     mockInvoke("get_app_version", async () => "1.0.0");
+    mockInvoke("get_update_config", async () => ({
+      repository_owner: "rattaroaz",
+      repository_name: "DKSKMaui",
+      check_on_startup: false,
+      enabled: false,
+    }));
     const { UpdateSettingsPage } = await import(
       "../../src/pages/UpdateSettingsPage"
     );

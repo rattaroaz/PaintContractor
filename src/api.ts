@@ -11,6 +11,7 @@ import type {
   MyCompanyInfo,
   OperationResult,
   PropertyAddressEntry,
+  UpdateSettings,
 } from "./types";
 
 export const api = {
@@ -93,4 +94,8 @@ export const api = {
     invokeLogged<OperationResult<number>>("import_sales_csv", { rows }),
 
   getAppVersion: () => invokeLogged<string>("get_app_version"),
+
+  getUpdateConfig: () => invokeLogged<UpdateSettings>("get_update_config"),
+  saveUpdateConfig: (cfg: UpdateSettings) =>
+    invokeLogged<OperationResult<void>>("save_update_config", { cfg }),
 };

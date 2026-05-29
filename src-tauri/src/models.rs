@@ -169,3 +169,13 @@ pub struct GitHubReleaseInfo {
     pub download_url: Option<String>,
     pub is_update_available: bool,
 }
+
+/// Persisted updater configuration (stored in AppConfig table).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateConfig {
+    pub repository_owner: String,
+    pub repository_name: String,
+    pub check_on_startup: bool,
+    pub enabled: bool,
+    pub last_check: Option<String>,
+}

@@ -31,6 +31,25 @@ describe("logger", () => {
     expect(line).toContain("count");
   });
 
+  it("redacts contractor SSN and contractor_id (new PII keys)", async () => {
+    pretendNotTauri();
+    const spy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { logger } = await import("../../src/utils/logger");
+    logger.info("save_contractor", {
+      id: 7,
+      name: "Alex Painter",
+      social_security_number: "123-45-6789",
+      contractor_id: "C-42",
+      payroll_percent: "15",
+    });
+    const line = String(spy.mock.calls[0]?.[0]);
+    expect(line).toContain("[redacted]");
+    expect(line).not.toContain("123-45-6789");
+    expect(line).not.toContain("C-42");
+    expect(line).toContain("Alex Painter");
+    expect(line).toContain("payroll_percent");
+  });
+
   it("summarizes large array payloads and redacts nested sensitive values", async () => {
     pretendNotTauri();
     const spy = vi.spyOn(console, "info").mockImplementation(() => {});

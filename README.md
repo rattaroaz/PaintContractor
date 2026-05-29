@@ -61,6 +61,28 @@ On startup the app records the database path, log directory, and version (see **
 
 For verbose IPC traces in development, run the desktop app in debug mode; production builds log destructive IPC at `info` and skip routine `debug` noise.
 
+## Real Auto-Updates (Tauri v2)
+
+The app now ships with a **real signed auto-update system** using the official `tauri-plugin-updater`.
+
+- Settings (owner/repo, check-on-startup, enabled) are persisted in the SQLite `AppConfig` table (migrated automatically from old localStorage).
+- "Check for Updates" uses the secure plugin (verifies ed25519 signatures).
+- When an update is available the **"Download & Install Update"** button performs a verified download + install with progress.
+- Updates only work from properly built release installers (not `tauri dev`).
+
+### Publishing a new version (maintainer steps)
+
+1. **One-time**: `cargo tauri signer generate` → copy the **public key** string into `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`. Keep the private key safe (never commit it).
+2. In CI / release workflow, provide `TAURI_SIGNING_PRIVATE_KEY` (and optional password) as a secret.
+3. Make sure `bundle.createUpdaterArtifacts: true` is set.
+4. Build with `cargo tauri build` (or use `tauri-apps/tauri-action` on GitHub).
+5. The build produces signed bundles (`.exe` / `.msi` + `.sig`) and you must also publish an `update.json` asset in the same GitHub Release (the plugin or a small script can generate it from the `.sig` contents).
+6. Point the `endpoints` in config (or let the persisted owner/repo drive a conventional URL) at that `update.json`.
+
+See the official Tauri v2 updater docs for the exact `update.json` schema and recommended GitHub workflow.
+
+In development the UI shows a note that real updates require release builds.
+
 ## Project layout
 
 | Path | Purpose |

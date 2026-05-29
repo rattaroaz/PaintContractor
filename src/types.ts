@@ -116,6 +116,7 @@ export interface UpdateSettings {
   repository_name: string;
   check_on_startup: boolean;
   enabled: boolean;
+  last_check?: string | null;
 }
 
 export interface GitHubReleaseInfo {

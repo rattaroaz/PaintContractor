@@ -34,6 +34,7 @@ pub fn run() {
                 ])
                 .build(),
         )
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             db::init_db().expect("Failed to initialize database");
             let log_dir = app
@@ -87,6 +88,8 @@ pub fn run() {
             get_app_version,
             get_logging_paths,
             log_frontend,
+            get_update_config,
+            save_update_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

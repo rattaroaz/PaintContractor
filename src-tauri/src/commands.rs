@@ -1,6 +1,6 @@
-use crate::db::{self, next_company_id, with_conn};
+use crate::db::{self, get_all_config_with_prefix, next_company_id, set_config_value, with_conn, with_transaction};
 use crate::log_util::{self, LoggingPaths};
-use crate::models::*;
+use crate::models::{*, UpdateConfig};
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use tauri::Manager;
@@ -751,11 +751,11 @@ pub fn replace_all_jobs(jobs: Vec<JobDescription>) -> Result<OperationResult<()>
         "replace_all_jobs",
         Some(&format!("count={}", jobs.len())),
         || {
-            with_conn(|conn| {
-                conn.execute("DELETE FROM JobDescription", [])
+            with_transaction(|tx| {
+                tx.execute("DELETE FROM JobDescription", [])
                     .map_err(|e| e.to_string())?;
                 for j in jobs {
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO JobDescription (description, sizeBedroom, sizeBathroom, price) VALUES (?1,?2,?3,?4)",
                         params![j.description, j.size_bedroom, j.size_bathroom, j.price],
                     )
@@ -1127,13 +1127,13 @@ pub fn import_companies_csv(rows: Vec<CsvCompanyRow>) -> Result<OperationResult<
         "import_companies_csv",
         Some(&format!("rows={}", rows.len())),
         || {
-            with_conn(|conn| {
+            with_transaction(|tx| {
                 let mut count = 0;
                 for row in rows {
                     if row.name.trim().is_empty() {
                         continue;
                     }
-                    let exists: Option<i64> = conn
+                    let exists: Option<i64> = tx
                         .query_row("SELECT Id FROM Company WHERE Name=?1", [&row.name], |r| {
                             r.get(0)
                         })
@@ -1142,8 +1142,8 @@ pub fn import_companies_csv(rows: Vec<CsvCompanyRow>) -> Result<OperationResult<
                     if exists.is_some() {
                         continue;
                     }
-                    let cid = next_company_id(conn)?;
-                    conn.execute(
+                    let cid = next_company_id(tx)?;
+                    tx.execute(
                         "INSERT INTO Company (CompanyID, Name, Owner, Phone, Email, Address, City, Zip, SpecialNote) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
                         params![
                             cid,
@@ -1192,13 +1192,13 @@ pub fn import_properties_csv(rows: Vec<CsvPropertyRow>) -> Result<OperationResul
         "import_properties_csv",
         Some(&format!("rows={}", rows.len())),
         || {
-            with_conn(|conn| {
+            with_transaction(|tx| {
                 let mut count = 0;
                 for row in rows {
                     let sid = if let Some(id) = row.supervisor_id {
                         id
                     } else if let Some(ref sn) = row.supervisor_name {
-                        conn.query_row(
+                        tx.query_row(
                             "SELECT Id FROM Supervisor WHERE Name=?1 LIMIT 1",
                             [sn],
                             |r| r.get::<_, i64>(0),
@@ -1207,7 +1207,7 @@ pub fn import_properties_csv(rows: Vec<CsvPropertyRow>) -> Result<OperationResul
                     } else {
                         continue;
                     };
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO Properties (Name, Address, City, Zip, GateCode, GarageRemoteCode, LockBox, SpecialNote, ManagerName, ManagerPhone, ManagerEmail, SupervisorId) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
                         params![
                             row.name,
@@ -1266,7 +1266,7 @@ pub fn import_sales_csv(rows: Vec<CsvSalesRow>) -> Result<OperationResult<i32>, 
         "import_sales_csv",
         Some(&format!("rows={}", rows.len())),
         || {
-            with_conn(|conn| {
+            with_transaction(|tx| {
                 let mut count = 0;
                 let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
                 for row in rows {
@@ -1298,7 +1298,7 @@ pub fn import_sales_csv(rows: Vec<CsvSalesRow>) -> Result<OperationResult<i32>, 
                         garage_remote_code: row.garage_remote_code,
                         status: 1,
                     };
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO Invoice (TodaysDate, WorkDate, CompanyName, PropertyAddress, Unit, GateCode, LockBox, SizeBedroom, SizeBathroom, WorkOrder, JobDescriptionChoice, ContractorName, AmountCost, AmountPaid1, DatePaid1, CheckNumber1, AmountPaid2, DatePaid2, CheckNumber2, InvoiceCreatedDate, SpecialNote, GarageRemoteCode, Status) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)",
                         params![
                             inv.todays_date,
@@ -1342,6 +1342,48 @@ pub fn import_sales_csv(rows: Vec<CsvSalesRow>) -> Result<OperationResult<i32>, 
 pub fn get_app_version() -> String {
     log_util::run_value("get_app_version", None, || {
         env!("CARGO_PKG_VERSION").to_string()
+    })
+}
+
+// --- Real auto-update config (persisted in AppConfig) ---
+
+#[tauri::command]
+pub fn get_update_config() -> UpdateConfig {
+    log_util::run_value("get_update_config", None, || {
+        let map = get_all_config_with_prefix("update.").unwrap_or_default();
+        UpdateConfig {
+            repository_owner: map
+                .get("update.repository_owner")
+                .cloned()
+                .unwrap_or_else(|| "rattaroaz".into()),
+            repository_name: map
+                .get("update.repository_name")
+                .cloned()
+                .unwrap_or_else(|| "DKSKMaui".into()),
+            check_on_startup: map
+                .get("update.check_on_startup")
+                .map(|v| v == "true")
+                .unwrap_or(true),
+            enabled: map
+                .get("update.enabled")
+                .map(|v| v == "true")
+                .unwrap_or(false),
+            last_check: map.get("update.last_check").cloned(),
+        }
+    })
+}
+
+#[tauri::command]
+pub fn save_update_config(cfg: UpdateConfig) -> Result<OperationResult<()>, String> {
+    log_util::run("save_update_config", None, || {
+        set_config_value("update.repository_owner", &cfg.repository_owner)?;
+        set_config_value("update.repository_name", &cfg.repository_name)?;
+        set_config_value("update.check_on_startup", if cfg.check_on_startup { "true" } else { "false" })?;
+        set_config_value("update.enabled", if cfg.enabled { "true" } else { "false" })?;
+        if let Some(ts) = &cfg.last_check {
+            set_config_value("update.last_check", ts)?;
+        }
+        Ok(OperationResult::ok_msg((), "Update settings saved."))
     })
 }
 

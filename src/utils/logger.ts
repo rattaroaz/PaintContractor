@@ -16,6 +16,9 @@ const SENSITIVE_KEYS = new Set([
   "gate_code",
   "lock_box",
   "garage_remote_code",
+  "social_security_number",
+  "socialsecuritynumber",
+  "contractor_id",
 ]);
 
 const LARGE_PAYLOAD_KEYS = new Set(["rows", "invoices", "jobs", "bytes"]);
