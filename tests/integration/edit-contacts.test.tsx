@@ -147,11 +147,12 @@ describe("EditContractor", () => {
     mockInvoke("get_all_contractors", async () => [c]);
     const { EditContractor } = await import("../../src/pages/EditContractor");
     renderWithProviders(<EditContractor />);
-    await waitFor(() => screen.getByPlaceholderText(/type first letters/i));
-    fireEvent.change(screen.getByPlaceholderText(/type first letters/i), {
-      target: { value: c.name },
+    // Browse button only renders after contractors load; avoids racing the async fetch.
+    fireEvent.click(await screen.findByTitle("Browse all"));
+    fireEvent.click(await screen.findByRole("button", { name: c.name }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
     });
-    await waitFor(() => screen.getByRole("button", { name: /^delete$/i }));
     return c;
   }
 
