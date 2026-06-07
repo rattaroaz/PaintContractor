@@ -202,7 +202,11 @@ fn ensure_defaults(conn: &Connection) -> Result<(), String> {
 
     // Seed update config (safe defaults: disabled until user configures + publishes signed releases)
     let cfg_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM AppConfig WHERE Key LIKE 'update.%'", [], |r| r.get(0))
+        .query_row(
+            "SELECT COUNT(*) FROM AppConfig WHERE Key LIKE 'update.%'",
+            [],
+            |r| r.get(0),
+        )
         .map_err(|e| e.to_string())?;
     if cfg_count == 0 {
         let defaults = [
@@ -278,11 +282,9 @@ pub fn next_company_id(conn: &Connection) -> Result<i32, String> {
 pub fn get_config_value(key: &str) -> Result<Option<String>, String> {
     with_conn(|conn| {
         let val: Option<String> = conn
-            .query_row(
-                "SELECT Value FROM AppConfig WHERE Key = ?1",
-                [key],
-                |r| r.get(0),
-            )
+            .query_row("SELECT Value FROM AppConfig WHERE Key = ?1", [key], |r| {
+                r.get(0)
+            })
             .optional()
             .map_err(|e| e.to_string())?;
         Ok(val)
@@ -301,7 +303,9 @@ pub fn set_config_value(key: &str, value: &str) -> Result<(), String> {
     })
 }
 
-pub fn get_all_config_with_prefix(prefix: &str) -> Result<std::collections::HashMap<String, String>, String> {
+pub fn get_all_config_with_prefix(
+    prefix: &str,
+) -> Result<std::collections::HashMap<String, String>, String> {
     with_conn(|conn| {
         let mut stmt = conn
             .prepare("SELECT Key, Value FROM AppConfig WHERE Key LIKE ?1")

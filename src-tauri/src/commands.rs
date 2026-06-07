@@ -1,6 +1,9 @@
-use crate::db::{self, get_all_config_with_prefix, next_company_id, set_config_value, with_conn, with_transaction};
+use crate::db::{
+    self, get_all_config_with_prefix, next_company_id, set_config_value, with_conn,
+    with_transaction,
+};
 use crate::log_util::{self, LoggingPaths};
-use crate::models::{*, UpdateConfig};
+use crate::models::{UpdateConfig, *};
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use tauri::Manager;
@@ -1378,7 +1381,14 @@ pub fn save_update_config(cfg: UpdateConfig) -> Result<OperationResult<()>, Stri
     log_util::run("save_update_config", None, || {
         set_config_value("update.repository_owner", &cfg.repository_owner)?;
         set_config_value("update.repository_name", &cfg.repository_name)?;
-        set_config_value("update.check_on_startup", if cfg.check_on_startup { "true" } else { "false" })?;
+        set_config_value(
+            "update.check_on_startup",
+            if cfg.check_on_startup {
+                "true"
+            } else {
+                "false"
+            },
+        )?;
         set_config_value("update.enabled", if cfg.enabled { "true" } else { "false" })?;
         if let Some(ts) = &cfg.last_check {
             set_config_value("update.last_check", ts)?;
