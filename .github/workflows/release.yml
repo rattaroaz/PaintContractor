@@ -31,17 +31,6 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Enable VBScript for WiX MSI builds
-        shell: pwsh
-        run: |
-          $cap = Get-WindowsCapability -Online |
-            Where-Object { $_.Name -like "VBSCRIPT*" -and $_.State -ne "Installed" }
-          if ($cap) {
-            Add-WindowsCapability -Online -Name $cap.Name
-          } else {
-            dism /online /enable-feature /featurename:VBSCRIPT /all /norestart 2>$null
-          }
-
       - name: Normalize signing secrets
         shell: bash
         env:
@@ -71,12 +60,12 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          args: --bundles nsis,msi
+          args: --bundles nsis
 
-      - name: Verify MSI artifact exists
+      - name: Verify NSIS artifact exists
         shell: pwsh
         run: |
-          $msi = Get-ChildItem -Path src-tauri/target/release/bundle/msi -Filter *.msi -Recurse -ErrorAction SilentlyContinue
-          if (-not $msi) {
-            Write-Error "No MSI artifact found after build."
+          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
+          if (-not $setup) {
+            Write-Error "No NSIS setup.exe artifact found after build."
           }
