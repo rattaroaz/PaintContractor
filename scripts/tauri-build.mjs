@@ -5,31 +5,46 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const signedFlag = process.argv.includes("--signed");
 const keyPath = path.join(__dirname, "tauri-signing.key");
 
-function hasSigningKey() {
-  if (process.env.TAURI_SIGNING_PRIVATE_KEY) return true;
-  if (signedFlag && existsSync(keyPath)) {
-    process.env.TAURI_SIGNING_PRIVATE_KEY = readFileSync(keyPath, "utf8");
-    return true;
+function loadSigningEnv() {
+  if (!process.env.TAURI_SIGNING_PRIVATE_KEY && existsSync(keyPath)) {
+    process.env.TAURI_SIGNING_PRIVATE_KEY = readFileSync(keyPath, "utf8").trim();
   }
-  return false;
+  const hasKey = Boolean(process.env.TAURI_SIGNING_PRIVATE_KEY);
+  const hasPassword = Boolean(process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD);
+  return { hasKey, hasPassword };
 }
 
-const signed = hasSigningKey();
-const override = signed
-  ? ""
-  : `-c '{"bundle":{"createUpdaterArtifacts":false}}'`;
+const { hasKey, hasPassword } = loadSigningEnv();
 
-if (!signed) {
+if (hasKey && !hasPassword) {
+  console.error(
+    "Found scripts/tauri-signing.key but TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set.\n" +
+      "Set it in your shell before building, for example:\n" +
+      '  $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "your-password"'
+  );
+  process.exit(1);
+}
+
+const configOverride = hasKey
+  ? null
+  : JSON.stringify({ bundle: { createUpdaterArtifacts: false } });
+
+if (!hasKey) {
   console.log(
-    "Building without updater artifacts (no signing key). Use npm run build:win:signed for release-parity builds."
+    "Building without updater artifacts (no signing key). Set TAURI_SIGNING_PRIVATE_KEY or place scripts/tauri-signing.key for signed builds."
   );
 }
 
-execSync(`npm run tauri build ${override}`.trim(), {
+const args = ["run", "tauri", "--", "build"];
+if (configOverride) {
+  args.push("-c", configOverride);
+}
+
+execSync(`npm ${args.map((a) => `"${a}"`).join(" ")}`, {
   cwd: root,
   stdio: "inherit",
   env: process.env,
+  shell: true,
 });

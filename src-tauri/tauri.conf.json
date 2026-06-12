@@ -38,7 +38,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5OXI5TGQvN2tlbGs0aFk4dGFmUkpwZjFJbGpMS2d6SXlibFVxenlhWXpSQUFBQkFBQUFBQUFBQUFBQUlBQUFBQTVyZlNHbVF2eklUeEcyelRuWG0zVWNtc1FLMlMzZHlrU1orNjVMeWpjUjR6UFhVQnJzWkdCSXJBczhBLzllS1lrci9VcFp2WUFtWnNqTmFxUitjUHJpczcrQkF1cEs4REI0Mkh3M245VnR2aXl3bEpQcFdSYkxMaDZ1ZkJKcHVOeXRRUENvcXRGUnM9Cg==",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFBMDlERjZERDZBNDIzNzQKUldSMEk2VFdiZDhKR29IM2xLcnpNbi9FajB6Z0JPdlZTemlXUzFJK1kxZkpuVFNCSUVyMjlLYXYK",
       "endpoints": [
         "https://github.com/rattaroaz/PaintContractor/releases/latest/download/latest.json"
       ],
