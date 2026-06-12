@@ -79,6 +79,14 @@ The app now ships with a **real signed auto-update system** using the official `
 5. The build produces signed bundles (`.exe` / `.msi` + `.sig`) and you must also publish an `update.json` asset in the same GitHub Release (the plugin or a small script can generate it from the `.sig` contents).
 6. Point the `endpoints` in config (or let the persisted owner/repo drive a conventional URL) at that `update.json`.
 
+
+On a new computer, for a signed release build:
+
+Copy scripts/tauri-signing.key securely (USB, password manager, etc.).
+Set the password once in that PowerShell session:
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "your-password"
+npm run build:win
+
 See the official Tauri v2 updater docs for the exact `update.json` schema and recommended GitHub workflow.
 
 In development the UI shows a note that real updates require release builds.
