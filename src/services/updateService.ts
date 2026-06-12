@@ -7,8 +7,8 @@ import type { UpdateDialogApi } from "@/context/UpdateDialogContext";
 import { logger } from "@/utils/logger";
 
 const UPDATE_FEED_UNAVAILABLE_MESSAGE =
-  "No update feed is published yet. Push a GitHub release tag (for example v1.0.1) " +
-  "with latest.json and signed installer assets. See the project README for setup.";
+  "No update feed is published yet. The GitHub Release workflow must complete successfully " +
+  "and publish latest.json plus signed installers. Check Actions → Release on GitHub.";
 
 function upToDateMessage(): string {
   return `${APP_NAME} is up to date (version ${APP_VERSION}).`;
