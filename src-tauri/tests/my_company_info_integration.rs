@@ -18,7 +18,7 @@ fn default_my_company_info_is_seeded() {
 
 #[test]
 #[serial]
-fn save_my_company_info_validates_name() {
+fn save_my_company_info_allows_empty_fields() {
     let _db = TestDb::new();
     let info = MyCompanyInfo {
         id: 1,
@@ -30,7 +30,9 @@ fn save_my_company_info_validates_name() {
         license_number: "".into(),
     };
     let res = save_my_company_info(info).unwrap();
-    assert!(!res.success);
+    assert!(res.success);
+    let fetched = get_my_company_info().unwrap();
+    assert_eq!(fetched.name, "   ");
 }
 
 #[test]

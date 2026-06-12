@@ -37,10 +37,6 @@ export function HomePage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!info.name.trim()) {
-      error("Name is required.");
-      return;
-    }
     try {
       const result = await api.saveMyCompanyInfo(info);
       if (result.success && result.data) {
@@ -67,38 +63,35 @@ export function HomePage() {
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
             <div className="col-md-6">
-              <label htmlFor="home-name" className="form-label">Name *</label>
+              <label htmlFor="home-name" className="form-label">Name</label>
               <input
                 id="home-name"
                 className="form-control"
                 value={info.name}
                 onChange={(e) => setInfo({ ...info, name: e.target.value })}
-                required
               />
             </div>
             <div className="col-md-6">
-              <label htmlFor="home-phone" className="form-label">Phone *</label>
+              <label htmlFor="home-phone" className="form-label">Phone</label>
               <input
                 id="home-phone"
                 className="form-control"
                 value={info.phone}
                 onChange={(e) => setInfo({ ...info, phone: e.target.value })}
-                required
               />
             </div>
             <div className="col-md-6">
-              <label htmlFor="home-email" className="form-label">Email *</label>
+              <label htmlFor="home-email" className="form-label">Email</label>
               <input
                 id="home-email"
                 type="email"
                 className="form-control"
                 value={info.email}
                 onChange={(e) => setInfo({ ...info, email: e.target.value })}
-                required
               />
             </div>
             <div className="col-md-6">
-              <label htmlFor="home-license" className="form-label">License Number *</label>
+              <label htmlFor="home-license" className="form-label">License Number</label>
               <input
                 id="home-license"
                 className="form-control"
@@ -106,11 +99,10 @@ export function HomePage() {
                 onChange={(e) =>
                   setInfo({ ...info, license_number: e.target.value })
                 }
-                required
               />
             </div>
             <div className="col-12">
-              <label htmlFor="home-address" className="form-label">Address *</label>
+              <label htmlFor="home-address" className="form-label">Address</label>
               <input
                 id="home-address"
                 className="form-control"
@@ -118,17 +110,15 @@ export function HomePage() {
                 onChange={(e) =>
                   setInfo({ ...info, address: e.target.value })
                 }
-                required
               />
             </div>
             <div className="col-md-4">
-              <label htmlFor="home-zip" className="form-label">Zip *</label>
+              <label htmlFor="home-zip" className="form-label">Zip</label>
               <input
                 id="home-zip"
                 className="form-control"
                 value={info.zip}
                 onChange={(e) => setInfo({ ...info, zip: e.target.value })}
-                required
               />
             </div>
           </div>

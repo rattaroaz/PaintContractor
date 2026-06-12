@@ -115,9 +115,6 @@ pub fn save_my_company_info(info: MyCompanyInfo) -> Result<OperationResult<MyCom
         "save_my_company_info",
         Some(&format!("id={}", info.id)),
         || {
-            if info.name.trim().is_empty() {
-                return Ok(OperationResult::err("Name is required."));
-            }
             with_conn(|conn| {
                 conn.execute(
             "UPDATE MyCompanyInfo SET Name=?1, Phone=?2, Email=?3, Address=?4, Zip=?5, LicenseNumber=?6 WHERE Id=?7",

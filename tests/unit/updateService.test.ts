@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { checkForUpdatesAndApply } from "../../src/services/updateService";
 import type { UpdateDialogApi } from "../../src/context/UpdateDialogContext";
+import { APP_VERSION } from "../../src/lib/constants";
+import { parseSemver } from "../../src/lib/semver";
 
 const check = vi.fn();
 const relaunch = vi.fn();
@@ -60,9 +62,11 @@ describe("checkForUpdatesAndApply", () => {
   });
 
   it("downloads and relaunches when a newer version is available", async () => {
+    const installed = parseSemver(APP_VERSION) ?? [1, 0, 0];
+    const newerVersion = `${installed[0]}.${installed[1]}.${installed[2] + 1}`;
     const downloadAndInstall = vi.fn().mockResolvedValue(undefined);
     check.mockResolvedValue({
-      version: "1.0.1",
+      version: newerVersion,
       downloadAndInstall,
     });
     relaunch.mockResolvedValue(undefined);

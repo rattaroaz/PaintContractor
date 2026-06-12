@@ -22,6 +22,7 @@ import {
 import { NotificationProvider } from "../../src/context/NotificationContext";
 import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
 import { UpdateDialogProvider } from "../../src/context/UpdateDialogContext";
+import { APP_VERSION } from "../../src/lib/constants";
 import {
   makeCompany,
   makeContractor,
@@ -67,14 +68,29 @@ describe("HomePage", () => {
     expect((saved as { name: string }).name).toBe("DKSK Painting");
   });
 
-  it("blocks submission when name is empty", async () => {
+  it("saves when all fields are empty", async () => {
     const { HomePage } = await import("../../src/pages/HomePage");
-    mockInvoke("get_my_company_info", async () => makeMyCompanyInfo({ name: "" }));
+    mockInvoke("get_my_company_info", async () =>
+      makeMyCompanyInfo({
+        name: "",
+        phone: "",
+        email: "",
+        address: "",
+        zip: "",
+        license_number: "",
+      })
+    );
+    mockInvoke("save_my_company_info", async (args) => ({
+      success: true,
+      message: "ok",
+      data: (args as { info: unknown }).info,
+    }));
     renderWithApp(<HomePage />);
     await waitFor(() => screen.getByRole("button", { name: /save changes/i }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-    // Form's required validation prevents the save_my_company_info call
-    expect(getInvokeCallsFor("save_my_company_info")).toHaveLength(0);
+    await waitFor(() =>
+      expect(getInvokeCallsFor("save_my_company_info")).toHaveLength(1)
+    );
   });
 });
 
@@ -324,7 +340,7 @@ describe("UpdateSettingsPage", () => {
       "../../src/pages/UpdateSettingsPage"
     );
     renderWithApp(<UpdateSettingsPage />, "/settings/updates");
-    expect(screen.getByText(/1\.0\.0/)).toBeInTheDocument();
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /check for updates/i })
     ).toBeInTheDocument();
