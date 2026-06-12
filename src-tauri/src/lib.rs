@@ -35,6 +35,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             db::init_db().expect("Failed to initialize database");
             let log_dir = app

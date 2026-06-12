@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DKSK Paint Contractor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.dksk.paintcontractor",
   "build": {
     "beforeDevCommand": "npm run dev:vite",
@@ -26,7 +26,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "msi"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
@@ -38,10 +38,9 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
-      "pubkey": "REPLACE_WITH_PUBLIC_KEY_FROM_cargo_tauri_signer_generate",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5OXI5TGQvN2tlbGs0aFk4dGFmUkpwZjFJbGpMS2d6SXlibFVxenlhWXpSQUFBQkFBQUFBQUFBQUFBQUlBQUFBQTVyZlNHbVF2eklUeEcyelRuWG0zVWNtc1FLMlMzZHlrU1orNjVMeWpjUjR6UFhVQnJzWkdCSXJBczhBLzllS1lrci9VcFp2WUFtWnNqTmFxUitjUHJpczcrQkF1cEs4REI0Mkh3M245VnR2aXl3bEpQcFdSYkxMaDZ1ZkJKcHVOeXRRUENvcXRGUnM9Cg==",
       "endpoints": [
-        "https://github.com/{{owner}}/{{repo}}/releases/latest/download/update.json"
+        "https://github.com/rattaroaz/PaintContractor/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

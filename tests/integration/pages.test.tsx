@@ -21,6 +21,7 @@ import {
 } from "../helpers/tauri-mock";
 import { NotificationProvider } from "../../src/context/NotificationContext";
 import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
+import { UpdateDialogProvider } from "../../src/context/UpdateDialogContext";
 import {
   makeCompany,
   makeContractor,
@@ -32,9 +33,11 @@ import {
 function renderWithApp(node: React.ReactNode, route = "/") {
   return render(
     <NotificationProvider>
-      <GlobalStateProvider>
-        <MemoryRouter initialEntries={[route]}>{node}</MemoryRouter>
-      </GlobalStateProvider>
+      <UpdateDialogProvider>
+        <GlobalStateProvider>
+          <MemoryRouter initialEntries={[route]}>{node}</MemoryRouter>
+        </GlobalStateProvider>
+      </UpdateDialogProvider>
     </NotificationProvider>
   );
 }
@@ -316,23 +319,12 @@ describe("ProfilePage", () => {
 });
 
 describe("UpdateSettingsPage", () => {
-  it("loads app version and shows check for updates", async () => {
-    localStorage.setItem(
-      "UpdateSettings",
-      JSON.stringify({ check_on_startup: false, enabled: false })
-    );
-    mockInvoke("get_app_version", async () => "1.0.0");
-    mockInvoke("get_update_config", async () => ({
-      repository_owner: "rattaroaz",
-      repository_name: "DKSKMaui",
-      check_on_startup: false,
-      enabled: false,
-    }));
+  it("shows app version and check for updates button", async () => {
     const { UpdateSettingsPage } = await import(
       "../../src/pages/UpdateSettingsPage"
     );
     renderWithApp(<UpdateSettingsPage />, "/settings/updates");
-    await waitFor(() => expect(screen.getByText(/1\.0\.0/)).toBeInTheDocument());
+    expect(screen.getByText(/1\.0\.0/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /check for updates/i })
     ).toBeInTheDocument();
@@ -340,12 +332,12 @@ describe("UpdateSettingsPage", () => {
 });
 
 describe("UpdateDashboardPage", () => {
-  it("links to update settings", async () => {
+  it("links to updates page", async () => {
     const { UpdateDashboardPage } = await import(
       "../../src/pages/UpdateDashboardPage"
     );
     renderWithApp(<UpdateDashboardPage />);
-    expect(screen.getByRole("link", { name: /update settings/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^updates$/i })).toHaveAttribute(
       "href",
       "/settings/updates"
     );

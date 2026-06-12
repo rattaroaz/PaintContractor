@@ -37,7 +37,7 @@ const navSections = [
   {
     header: "Settings",
     items: [
-      { to: "/settings/updates", label: "Update Settings", icon: "⚙" },
+      { to: "/settings/updates", label: "Updates", icon: "⚙" },
     ],
   },
 ];

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { UpdateDialog } from "./components/UpdateDialog";
 import { MainLayout } from "./layout/MainLayout";
 import { AccountsReceivablePage } from "./pages/AccountsReceivablePage";
 import { ActiveJobsPage } from "./pages/ActiveJobsPage";
@@ -23,7 +24,9 @@ import { UpdateSettingsPage } from "./pages/UpdateSettingsPage";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <UpdateDialog />
+      <Routes>
       <Route path="/logout" element={<LogoutPage />} />
       <Route
         element={
@@ -71,5 +74,6 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+    </>
   );
 }

@@ -1,30 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { isTauri } from "@tauri-apps/api/core";
 import App from "./App";
 import { DesktopRuntimeGate } from "./components/DesktopRuntimeGate";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GlobalStateProvider } from "./context/GlobalStateContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { UpdateDialogProvider } from "./context/UpdateDialogContext";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/app.css";
 
 async function bootstrap() {
   if (import.meta.env.VITE_TAURI_MOCK === "1") {
     await import("./test-utils/install-tauri-mock");
-  } else {
-    if (isTauri() && !localStorage.getItem("UpdateSettings")) {
-      localStorage.setItem(
-        "UpdateSettings",
-        JSON.stringify({
-          repository_owner: "rattaroaz",
-          repository_name: "DKSKMaui",
-          check_on_startup: false,
-          enabled: false,
-        })
-      );
-    }
   }
 
   ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -33,9 +21,11 @@ async function bootstrap() {
         <BrowserRouter>
           <DesktopRuntimeGate>
             <NotificationProvider>
-              <GlobalStateProvider>
-                <App />
-              </GlobalStateProvider>
+              <UpdateDialogProvider>
+                <GlobalStateProvider>
+                  <App />
+                </GlobalStateProvider>
+              </UpdateDialogProvider>
             </NotificationProvider>
           </DesktopRuntimeGate>
         </BrowserRouter>

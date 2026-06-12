@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.0.1)"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish Windows release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Enable VBScript for WiX MSI builds
+        shell: pwsh
+        run: |
+          $cap = Get-WindowsCapability -Online |
+            Where-Object { $_.Name -like "VBSCRIPT*" -and $_.State -ne "Installed" }
+          if ($cap) {
+            Add-WindowsCapability -Online -Name $cap.Name
+          } else {
+            dism /online /enable-feature /featurename:VBSCRIPT /all /norestart 2>$null
+          }
+
+      - name: Normalize signing secrets
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          RAW_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          trimmed_key="$(printf '%s' "$RAW_KEY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          trimmed_password="$(printf '%s' "$RAW_PASSWORD" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -z "$trimmed_key" ] || [ -z "$trimmed_password" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD must be set."
+            exit 1
+          fi
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo "$trimmed_key"
+            echo "EOF"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$trimmed_password"
+          } >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name || github.event.inputs.tag }}
+          releaseName: "DKSK Paint Contractor ${{ github.ref_name || github.event.inputs.tag }}"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: --bundles nsis,msi
+
+      - name: Verify MSI artifact exists
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path src-tauri/target/release/bundle/msi -Filter *.msi -Recurse -ErrorAction SilentlyContinue
+          if (-not $msi) {
+            Write-Error "No MSI artifact found after build."
+          }

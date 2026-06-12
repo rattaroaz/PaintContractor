@@ -7,14 +7,15 @@ export function UpdateDashboardPage() {
       <PageTitle title="Update Dashboard" icon="📥" />
       <div className="card-section">
         <p>
-          Real auto-update (signed downloads + install) now lives on{" "}
-          <Link to="/settings/updates">Update Settings</Link>. Use the "Check for Updates"
-          and "Download &amp; Install Update" buttons there.
+          Signed auto-updates are managed on the{" "}
+          <Link to="/settings/updates">Updates</Link> page. Use{" "}
+          <strong>Check for updates</strong> to download and install a newer
+          release when one is published.
         </p>
-        <p className="text-muted small">
-          This page is a placeholder for future advanced progress/history. Publishing
-          updates requires generating signing keys once and uploading a proper
-          <code>update.json</code> + signed bundles (see README).
+        <p className="text-muted small mb-0">
+          Releases are published via GitHub Actions when a <code>vX.Y.Z</code> tag
+          is pushed. The installed app fetches <code>latest.json</code> from
+          GitHub Releases and verifies signed installers before installing.
         </p>
       </div>
     </div>
