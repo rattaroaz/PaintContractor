@@ -1,0 +1,6 @@
+# Reduce intermittent crates.io failures in CI (HTTP/2 framing errors).
+[net]
+retry = 10
+
+[http]
+multiplexing = false

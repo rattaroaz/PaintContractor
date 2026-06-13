@@ -34,6 +34,9 @@ jobs:
   rust:
     name: cargo test (unit / integration / property / snapshot / contract)
     runs-on: ubuntu-latest
+    env:
+      CARGO_NET_RETRY: 10
+      CARGO_HTTP_MULTIPLEXING: false
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust toolchain
@@ -99,6 +102,9 @@ jobs:
   clippy:
     name: cargo fmt + clippy
     runs-on: ubuntu-latest
+    env:
+      CARGO_NET_RETRY: 10
+      CARGO_HTTP_MULTIPLEXING: false
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -119,6 +125,15 @@ jobs:
       - name: cargo fmt --check
         working-directory: src-tauri
         run: cargo fmt -- --check
+      - name: Fetch dependencies
+        working-directory: src-tauri
+        run: cargo fetch --locked
       - name: cargo clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: |
+          for attempt in 1 2 3; do
+            cargo clippy --all-targets -- -D warnings && exit 0
+            echo "cargo clippy failed (attempt ${attempt}/3); retrying in 15s..."
+            sleep 15
+          done
+          exit 1
