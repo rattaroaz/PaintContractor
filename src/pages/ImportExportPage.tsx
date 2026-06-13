@@ -11,6 +11,7 @@ import {
   parsePropertiesCsv,
   parseSalesCsv,
 } from "../utils/csv";
+import { confirmDelete } from "../utils/confirm";
 
 type Tab = "backup" | "companies" | "properties" | "sales";
 
@@ -85,9 +86,9 @@ export function ImportExportPage() {
       const file = input.files?.[0];
       if (!file) return;
       if (
-        !confirm(
+        !(await confirmDelete(
           "Restore will replace the current database. Continue?"
-        )
+        ))
       ) {
         return;
       }

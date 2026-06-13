@@ -1,7 +1,7 @@
 {
   "name": "paint-contractor",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/tauri-cli.mjs dev",
@@ -10,6 +10,8 @@
     "build": "tsc && vite build",
     "build:win": "node scripts/tauri-build.mjs",
     "build:win:signed": "node scripts/tauri-build.mjs --signed",
+    "check:version": "node scripts/check-version-sync.mjs",
+    "validate:latest-json": "node scripts/validate-latest-json.mjs",
     "preview": "vite preview",
     "tauri": "node scripts/tauri-cli.mjs",
     "test": "vitest run",

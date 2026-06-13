@@ -3,7 +3,7 @@
 //! `serde_json::Value` shape checks. If a model changes, both this test and
 //! the matching `src/types.ts` interface must be updated, keeping them in sync.
 
-use paint_contractor_lib::models::*;
+use paint_contractor_lib::{log_util, models::*};
 use serde_json::{json, Value};
 
 fn assert_keys(v: &Value, expected: &[&str]) {
@@ -364,4 +364,47 @@ fn deserializing_unknown_extra_fields_is_tolerated() {
     });
     let res: Result<MyCompanyInfo, _> = serde_json::from_value(payload);
     assert!(res.is_ok());
+}
+
+#[test]
+fn update_config_keys_match_typescript() {
+    let v = serde_json::to_value(UpdateConfig {
+        repository_owner: "rattaroaz".into(),
+        repository_name: "PaintContractor".into(),
+        check_on_startup: false,
+        enabled: true,
+        last_check: None,
+    })
+    .unwrap();
+    assert_keys(
+        &v,
+        &[
+            "repository_owner",
+            "repository_name",
+            "check_on_startup",
+            "enabled",
+            "last_check",
+        ],
+    );
+}
+
+#[test]
+fn logging_paths_keys_match_typescript() {
+    let v = serde_json::to_value(log_util::LoggingPaths {
+        database_path: "C:/data/app.db".into(),
+        log_directory: "C:/data/logs".into(),
+    })
+    .unwrap();
+    assert_keys(&v, &["database_path", "log_directory"]);
+}
+
+#[test]
+fn app_log_entry_keys_match_typescript() {
+    let v = serde_json::to_value(log_util::AppLogEntry {
+        timestamp: "2026-06-13 10:00:00".into(),
+        level: "info".into(),
+        message: "ready".into(),
+    })
+    .unwrap();
+    assert_keys(&v, &["timestamp", "level", "message"]);
 }

@@ -1,46 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useGlobalState } from "../context/GlobalStateContext";
-
-const navSections = [
-  {
-    header: "Operations",
-    items: [
-      { to: "/startjob", label: "Start Job", icon: "📋" },
-      { to: "/activejobs", label: "Active Jobs", icon: "🔧" },
-      { to: "/createinvoice", label: "Create Invoice", icon: "🧾" },
-    ],
-  },
-  {
-    header: "Finance",
-    items: [
-      { to: "/accountsreceivable", label: "Accounts Receivable", icon: "🏦" },
-      { to: "/agingreports", label: "Aging Reports", icon: "📅" },
-      { to: "/sales", label: "Sales", icon: "📈" },
-      { to: "/payroll", label: "Payroll", icon: "💰" },
-      { to: "/contractorjobs", label: "Contractor Jobs", icon: "🏗" },
-    ],
-  },
-  {
-    header: "Reference Data",
-    items: [
-      { to: "/editviewcontacts", label: "Contacts", icon: "👥" },
-      { to: "/newjobs", label: "Job Catalog", icon: "➕" },
-    ],
-  },
-  {
-    header: "System",
-    items: [
-      { to: "/importexport", label: "Import / Export / Backup", icon: "⇅" },
-    ],
-  },
-  {
-    header: "Settings",
-    items: [
-      { to: "/settings/updates", label: "Updates", icon: "⚙" },
-    ],
-  },
-];
+import { NAV_SECTIONS } from "../routeMetadata";
 
 export function MainLayout() {
   const { currentSection, myCompanyInfo } = useGlobalState();
@@ -66,7 +27,7 @@ export function MainLayout() {
               <div>Company: {myCompanyInfo.name}</div>
             )}
           </div>
-          {navSections.map((section) => (
+          {NAV_SECTIONS.map((section) => (
             <div key={section.header} className="mb-3">
               <div className="nav-section-header text-white-50">
                 {section.header}

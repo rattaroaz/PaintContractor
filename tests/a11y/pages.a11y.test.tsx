@@ -15,8 +15,7 @@ import {
   mockInvokeMany,
   resetInvokeMock,
 } from "../helpers/tauri-mock";
-import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
-import { NotificationProvider } from "../../src/context/NotificationContext";
+import { AppProviders } from "../../src/context/AppProviders";
 import {
   makeCompany,
   makeContractor,
@@ -92,11 +91,9 @@ async function strictAudit(container: Element): Promise<void> {
 
 function renderPage(node: React.ReactNode) {
   return render(
-    <NotificationProvider>
-      <GlobalStateProvider>
-        <MemoryRouter>{node}</MemoryRouter>
-      </GlobalStateProvider>
-    </NotificationProvider>
+    <AppProviders>
+      <MemoryRouter>{node}</MemoryRouter>
+    </AppProviders>
   );
 }
 

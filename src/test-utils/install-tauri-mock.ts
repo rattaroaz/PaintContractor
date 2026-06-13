@@ -28,6 +28,13 @@ interface Stores {
   contractors: Contractor[];
   jobs: JobDescription[];
   invoices: Invoice[];
+  updateConfig: {
+    repository_owner: string;
+    repository_name: string;
+    check_on_startup: boolean;
+    enabled: boolean;
+    last_check: string | null;
+  };
 }
 
 const stores: Stores = {
@@ -78,6 +85,13 @@ const stores: Stores = {
     { id: 3, description: "Trim Work", size_bedroom: 2, size_bathroom: 2, price: 40 },
   ],
   invoices: [],
+  updateConfig: {
+    repository_owner: "rattaroaz",
+    repository_name: "PaintContractor",
+    check_on_startup: false,
+    enabled: true,
+    last_check: null,
+  },
 };
 
 const handlers = new Map<string, Handler>();
@@ -99,6 +113,11 @@ function registerDefaults(): void {
   handlers.set("get_app_logs", async () => []);
   handlers.set("log_frontend", async () => null);
   handlers.set("get_app_version", async () => "1.0.0-mock");
+  handlers.set("get_update_config", async () => stores.updateConfig);
+  handlers.set("save_update_config", async (args) => {
+    stores.updateConfig = (args as { cfg: Stores["updateConfig"] }).cfg;
+    return ok(undefined);
+  });
 
   handlers.set("get_my_company_info", async () => stores.myCompany);
   handlers.set("save_my_company_info", async (args) => {
@@ -370,4 +389,6 @@ let cbId = 0;
 
 (window as unknown as Record<string, unknown>).__mockStores__ = stores;
 
-export {};
+export function getDefaultMockCommandNames(): string[] {
+  return [...handlers.keys()].sort();
+}

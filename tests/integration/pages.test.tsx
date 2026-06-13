@@ -20,9 +20,7 @@ import {
   getInvokeCallsFor,
   autoConfirm,
 } from "../helpers/tauri-mock";
-import { NotificationProvider } from "../../src/context/NotificationContext";
-import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
-import { UpdateDialogProvider } from "../../src/context/UpdateDialogContext";
+import { AppProviders } from "../../src/context/AppProviders";
 import { APP_VERSION } from "../../src/lib/constants";
 import {
   makeCompany,
@@ -34,13 +32,9 @@ import {
 
 function renderWithApp(node: React.ReactNode, route = "/") {
   return render(
-    <NotificationProvider>
-      <UpdateDialogProvider>
-        <GlobalStateProvider>
-          <MemoryRouter initialEntries={[route]}>{node}</MemoryRouter>
-        </GlobalStateProvider>
-      </UpdateDialogProvider>
-    </NotificationProvider>
+    <AppProviders>
+      <MemoryRouter initialEntries={[route]}>{node}</MemoryRouter>
+    </AppProviders>
   );
 }
 

@@ -9,8 +9,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { JobCatalogPage } from "../../src/pages/JobCatalogPage";
-import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
-import { NotificationProvider } from "../../src/context/NotificationContext";
+import { AppProviders } from "../../src/context/AppProviders";
 import {
   autoConfirm,
   getInvokeCallsFor,
@@ -23,11 +22,9 @@ import { makeJob } from "../helpers/fixtures";
 function renderPage() {
   return render(
     <MemoryRouter>
-      <NotificationProvider>
-        <GlobalStateProvider>
-          <JobCatalogPage />
-        </GlobalStateProvider>
-      </NotificationProvider>
+      <AppProviders>
+        <JobCatalogPage />
+      </AppProviders>
     </MemoryRouter>
   );
 }

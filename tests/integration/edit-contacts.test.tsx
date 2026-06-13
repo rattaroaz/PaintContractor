@@ -13,17 +13,14 @@ import {
   okResult,
   resetInvokeMock,
 } from "../helpers/tauri-mock";
-import { NotificationProvider } from "../../src/context/NotificationContext";
-import { GlobalStateProvider } from "../../src/context/GlobalStateContext";
+import { AppProviders } from "../../src/context/AppProviders";
 import { makeCompany, makeContractor } from "../helpers/fixtures";
 
 function renderWithProviders(node: React.ReactNode) {
   return render(
-    <NotificationProvider>
-      <GlobalStateProvider>
-        <MemoryRouter>{node}</MemoryRouter>
-      </GlobalStateProvider>
-    </NotificationProvider>
+    <AppProviders>
+      <MemoryRouter>{node}</MemoryRouter>
+    </AppProviders>
   );
 }
 

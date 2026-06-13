@@ -8,9 +8,37 @@ use log::{debug, error, info, warn};
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
+const MAX_FRONTEND_LOG_CHARS: usize = 8_000;
+
 #[tauri::command]
 fn log_frontend(level: String, message: String, context: Option<String>) {
-    let ctx = context.as_deref().unwrap_or("");
+    let message = if message.chars().count() > MAX_FRONTEND_LOG_CHARS {
+        format!(
+            "{}… [truncated]",
+            message
+                .chars()
+                .take(MAX_FRONTEND_LOG_CHARS)
+                .collect::<String>()
+        )
+    } else {
+        message
+    };
+    let ctx = context
+        .as_deref()
+        .map(|value| {
+            if value.chars().count() > MAX_FRONTEND_LOG_CHARS {
+                format!(
+                    "{}… [truncated]",
+                    value
+                        .chars()
+                        .take(MAX_FRONTEND_LOG_CHARS)
+                        .collect::<String>()
+                )
+            } else {
+                value.to_string()
+            }
+        })
+        .unwrap_or_default();
     match level.as_str() {
         "error" => error!("[frontend] {} {}", message, ctx),
         "warn" => warn!("[frontend] {} {}", message, ctx),
@@ -37,7 +65,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            db::init_db().expect("Failed to initialize database");
+            if let Err(e) = db::init_db() {
+                error!("Failed to initialize database: {}", e);
+                return Err(Box::<dyn std::error::Error>::from(std::io::Error::other(
+                    format!("Failed to initialize database: {e}"),
+                )));
+            }
             let log_dir = app
                 .path()
                 .app_log_dir()

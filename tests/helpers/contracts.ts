@@ -117,3 +117,22 @@ export const invoiceSchema = z
   .refine((i) => i.amount_paid1 + i.amount_paid2 <= i.amount_cost, {
     message: "Combined paid amount cannot be greater than amount cost.",
   });
+
+export const updateSettingsSchema = z.object({
+  repository_owner: z.string(),
+  repository_name: z.string(),
+  check_on_startup: z.boolean(),
+  enabled: z.boolean(),
+  last_check: z.string().nullable().optional(),
+});
+
+export const loggingPathsSchema = z.object({
+  database_path: z.string(),
+  log_directory: z.string(),
+});
+
+export const appLogEntrySchema = z.object({
+  timestamp: z.string(),
+  level: z.string(),
+  message: z.string(),
+});

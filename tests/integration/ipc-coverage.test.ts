@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { api } from "../../src/api";
+import { getDefaultMockCommandNames } from "../../src/test-utils/install-tauri-mock";
 
 const COMMAND_FOR_METHOD: Record<string, string> = {
   getLoggingPaths: "get_logging_paths",
@@ -53,5 +54,15 @@ describe("Playwright mock IPC coverage", () => {
       expect(COMMAND_FOR_METHOD[key], `missing mapping for api.${key}`).toBeTruthy();
     }
     expect(Object.keys(COMMAND_FOR_METHOD).length).toBe(Object.keys(api).length);
+  });
+
+  it("has a default Playwright mock handler for every api wrapper", () => {
+    const mockedCommands = new Set(getDefaultMockCommandNames());
+    for (const [method, command] of Object.entries(COMMAND_FOR_METHOD)) {
+      expect(
+        mockedCommands.has(command),
+        `missing Playwright mock handler for api.${method} (${command})`
+      ).toBe(true);
+    }
   });
 });

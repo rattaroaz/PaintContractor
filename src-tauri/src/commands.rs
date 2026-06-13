@@ -8,6 +8,8 @@ use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use tauri::Manager;
 
+const MAX_RESTORE_BYTES: usize = 100 * 1024 * 1024;
+
 fn row_invoice(row: &rusqlite::Row<'_>) -> Result<Invoice, rusqlite::Error> {
     Ok(Invoice {
         id: row.get(0)?,
@@ -89,7 +91,16 @@ pub fn restore_database_file(bytes: Vec<u8>) -> Result<(), String> {
     log_util::run(
         "restore_database_file",
         Some(&format!("bytes={}", bytes.len())),
-        || db::restore_db(&bytes),
+        || {
+            if bytes.len() > MAX_RESTORE_BYTES {
+                return Err(format!(
+                    "Database restore file is too large ({} bytes, max {} bytes).",
+                    bytes.len(),
+                    MAX_RESTORE_BYTES
+                ));
+            }
+            db::restore_db(&bytes)
+        },
     )
 }
 
@@ -305,19 +316,19 @@ pub fn save_company(company: Company) -> Result<OperationResult<Company>, String
                 ));
             }
 
-            with_conn(|conn| {
+            with_transaction(|tx| {
                 if company.id == 0 {
-                    if company_name_exists(conn, &name, 0)? {
+                    if company_name_exists(tx, &name, 0)? {
                         return Ok(OperationResult::err(
                             "A company with this name already exists.",
                         ));
                     }
-                    if company_id_exists(conn, company.company_id, 0)? {
+                    if company_id_exists(tx, company.company_id, 0)? {
                         return Ok(OperationResult::err(
                             "This Company ID is already in use. Choose another ID or use the suggested next ID.",
                         ));
                     }
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO Company (CompanyID, Name, Owner, Phone, Email, Address, City, Zip, SpecialNote) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
                         params![
                             company.company_id,
@@ -332,24 +343,24 @@ pub fn save_company(company: Company) -> Result<OperationResult<Company>, String
                         ],
                     )
                     .map_err(|e| e.to_string())?;
-                    let id = conn.last_insert_rowid();
-                    save_supervisors(conn, id, &company.supervisors)?;
+                    let id = tx.last_insert_rowid();
+                    save_supervisors(tx, id, &company.supervisors)?;
                     let mut saved = company;
                     saved.id = id;
                     saved.name = name;
                     return Ok(OperationResult::ok(saved));
                 }
 
-                if company_name_exists(conn, &name, company.id)? {
+                if company_name_exists(tx, &name, company.id)? {
                     return Ok(OperationResult::err(
                         "A company with this name already exists.",
                     ));
                 }
-                if company_id_exists(conn, company.company_id, company.id)? {
+                if company_id_exists(tx, company.company_id, company.id)? {
                     return Ok(OperationResult::err("This Company ID is already in use."));
                 }
 
-                conn.execute(
+                tx.execute(
                     "UPDATE Company SET CompanyID=?1, Name=?2, Owner=?3, Phone=?4, Email=?5, Address=?6, City=?7, Zip=?8, SpecialNote=?9 WHERE Id=?10",
                     params![
                         company.company_id,
@@ -367,20 +378,20 @@ pub fn save_company(company: Company) -> Result<OperationResult<Company>, String
                 .map_err(|e| e.to_string())?;
                 for sup in &company.supervisors {
                     if sup.id == 0 {
-                        conn.execute(
+                        tx.execute(
                             "INSERT INTO Supervisor (Name, Phone, Email, CompanyId) VALUES (?1,?2,?3,?4)",
                             params![sup.name, sup.phone, sup.email, company.id],
                         )
                         .map_err(|e| e.to_string())?;
-                        let sid = conn.last_insert_rowid();
-                        save_properties(conn, sid, &sup.properties)?;
+                        let sid = tx.last_insert_rowid();
+                        save_properties(tx, sid, &sup.properties)?;
                     } else {
-                        conn.execute(
+                        tx.execute(
                             "UPDATE Supervisor SET Name=?1, Phone=?2, Email=?3 WHERE Id=?4",
                             params![sup.name, sup.phone, sup.email, sup.id],
                         )
                         .map_err(|e| e.to_string())?;
-                        save_properties(conn, sup.id, &sup.properties)?;
+                        save_properties(tx, sup.id, &sup.properties)?;
                     }
                 }
                 let mut saved = company;
@@ -1084,9 +1095,9 @@ pub fn apply_receivable_payments(
             }
             let mut updated = 0;
             let mut fully_paid = 0;
-            with_conn(|conn| {
+            with_transaction(|tx| {
                 for inv in invoices {
-                    conn.execute(
+                    tx.execute(
                         "UPDATE Invoice SET AmountPaid1=?1, DatePaid1=?2, CheckNumber1=?3, AmountPaid2=?4, DatePaid2=?5, CheckNumber2=?6 WHERE Id=?7",
                         params![
                             inv.amount_paid1,
@@ -1356,10 +1367,10 @@ pub fn get_app_version() -> String {
 // --- Real auto-update config (persisted in AppConfig) ---
 
 #[tauri::command]
-pub fn get_update_config() -> UpdateConfig {
-    log_util::run_value("get_update_config", None, || {
-        let map = get_all_config_with_prefix("update.").unwrap_or_default();
-        UpdateConfig {
+pub fn get_update_config() -> Result<UpdateConfig, String> {
+    log_util::run("get_update_config", None, || {
+        let map = get_all_config_with_prefix("update.")?;
+        Ok(UpdateConfig {
             repository_owner: map
                 .get("update.repository_owner")
                 .cloned()
@@ -1367,17 +1378,17 @@ pub fn get_update_config() -> UpdateConfig {
             repository_name: map
                 .get("update.repository_name")
                 .cloned()
-                .unwrap_or_else(|| "DKSKMaui".into()),
+                .unwrap_or_else(|| "PaintContractor".into()),
             check_on_startup: map
                 .get("update.check_on_startup")
                 .map(|v| v == "true")
-                .unwrap_or(true),
+                .unwrap_or(false),
             enabled: map
                 .get("update.enabled")
                 .map(|v| v == "true")
                 .unwrap_or(false),
             last_check: map.get("update.last_check").cloned(),
-        }
+        })
     })
 }
 

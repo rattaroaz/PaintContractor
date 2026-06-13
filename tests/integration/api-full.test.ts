@@ -28,6 +28,32 @@ function bind(cmd: string, value: unknown = null) {
 }
 
 describe("api contract — every wrapper exists and forwards the expected args", () => {
+  it("getLoggingPaths / getAppLogs", async () => {
+    bind("get_logging_paths", {
+      database_path: "/tmp/app.db",
+      log_directory: "/tmp/logs",
+    });
+    bind("get_app_logs", [
+      {
+        timestamp: "2026-06-13 10:00:00",
+        level: "info",
+        message: "ready",
+      },
+    ]);
+
+    await expect(api.getLoggingPaths()).resolves.toEqual({
+      database_path: "/tmp/app.db",
+      log_directory: "/tmp/logs",
+    });
+    await expect(api.getAppLogs()).resolves.toEqual([
+      {
+        timestamp: "2026-06-13 10:00:00",
+        level: "info",
+        message: "ready",
+      },
+    ]);
+  });
+
   it("getDatabasePath / createDatabaseBackup / restoreDatabaseFile", async () => {
     bind("get_database_path", "/tmp/db");
     bind("create_database_backup", [1, 2, 3]);
@@ -162,6 +188,23 @@ describe("api contract — every wrapper exists and forwards the expected args",
   it("getAppVersion", async () => {
     bind("get_app_version", "1.0.0");
     await expect(api.getAppVersion()).resolves.toBe("1.0.0");
+  });
+
+  it("update config commands", async () => {
+    const cfg = {
+      repository_owner: "rattaroaz",
+      repository_name: "PaintContractor",
+      check_on_startup: false,
+      enabled: true,
+      last_check: null,
+    };
+    bind("get_update_config", cfg);
+    bind("save_update_config", { success: true });
+
+    await expect(api.getUpdateConfig()).resolves.toEqual(cfg);
+    await api.saveUpdateConfig(cfg);
+
+    expect(getInvokeCallsFor("save_update_config")).toEqual([{ cfg }]);
   });
 });
 

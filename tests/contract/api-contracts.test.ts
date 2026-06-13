@@ -14,14 +14,17 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  appLogEntrySchema,
   companySchema,
   contractorSchema,
   invoiceSchema,
   jobDescriptionSchema,
+  loggingPathsSchema,
   myCompanyInfoSchema,
   operationResult,
   propertySchema,
   supervisorSchema,
+  updateSettingsSchema,
 } from "../helpers/contracts";
 import {
   makeCompany,
@@ -91,5 +94,38 @@ describe("OperationResult<T> envelope", () => {
 
   it("rejects when success is missing", () => {
     expect(() => schema.parse({ message: "x" })).toThrow();
+  });
+});
+
+describe("system contracts", () => {
+  it("UpdateSettings payload matches schema", () => {
+    expect(
+      updateSettingsSchema.parse({
+        repository_owner: "rattaroaz",
+        repository_name: "PaintContractor",
+        check_on_startup: false,
+        enabled: true,
+        last_check: null,
+      })
+    ).toBeDefined();
+  });
+
+  it("LoggingPaths payload matches schema", () => {
+    expect(
+      loggingPathsSchema.parse({
+        database_path: "C:/data/app.db",
+        log_directory: "C:/data/logs",
+      })
+    ).toBeDefined();
+  });
+
+  it("AppLogEntry payload matches schema", () => {
+    expect(
+      appLogEntrySchema.parse({
+        timestamp: "2026-06-13 10:00:00",
+        level: "info",
+        message: "Update check started",
+      })
+    ).toBeDefined();
   });
 });

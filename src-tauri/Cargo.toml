@@ -1,6 +1,6 @@
 [package]
 name = "paint-contractor"
-version = "1.0.4"
+version = "1.1.0"
 description = "DKSK Painting Contractor Management"
 authors = ["DKSK"]
 edition = "2021"

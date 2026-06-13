@@ -3,25 +3,9 @@
  * render its title, and avoid crashing the ErrorBoundary.
  */
 import { expect, test } from "@playwright/test";
+import { SMOKE_ROUTES } from "../../src/routeMetadata";
 
-const ROUTES: Array<{ path: string; titlePattern: RegExp }> = [
-  { path: "/", titlePattern: /my company info/i },
-  { path: "/startjob", titlePattern: /start (work order|a? ?job)/i },
-  { path: "/activejobs", titlePattern: /active jobs/i },
-  { path: "/createinvoice", titlePattern: /create invoice/i },
-  { path: "/accountsreceivable", titlePattern: /accounts receivable/i },
-  { path: "/agingreports", titlePattern: /aging/i },
-  { path: "/sales", titlePattern: /sales/i },
-  { path: "/payroll", titlePattern: /payroll/i },
-  { path: "/contractorjobs", titlePattern: /contractor jobs/i },
-  { path: "/editviewcontacts", titlePattern: /contacts/i },
-  { path: "/newjobs", titlePattern: /new jobs|job catalog/i },
-  { path: "/importexport", titlePattern: /import.*export/i },
-  { path: "/addcontacts", titlePattern: /add (contacts|new)/i },
-  { path: "/addcontacts/addcompany", titlePattern: /add.*company/i },
-];
-
-for (const { path, titlePattern } of ROUTES) {
+for (const { path, titlePattern } of SMOKE_ROUTES) {
   test(`route ${path} mounts without errors`, async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on("pageerror", (err) => consoleErrors.push(err.message));

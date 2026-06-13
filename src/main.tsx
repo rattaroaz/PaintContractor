@@ -4,9 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { DesktopRuntimeGate } from "./components/DesktopRuntimeGate";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { GlobalStateProvider } from "./context/GlobalStateContext";
-import { NotificationProvider } from "./context/NotificationContext";
-import { UpdateDialogProvider } from "./context/UpdateDialogContext";
+import { AppProviders } from "./context/AppProviders";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/app.css";
 
@@ -20,13 +18,9 @@ async function bootstrap() {
       <ErrorBoundary>
         <BrowserRouter>
           <DesktopRuntimeGate>
-            <NotificationProvider>
-              <UpdateDialogProvider>
-                <GlobalStateProvider>
-                  <App />
-                </GlobalStateProvider>
-              </UpdateDialogProvider>
-            </NotificationProvider>
+            <AppProviders>
+              <App />
+            </AppProviders>
           </DesktopRuntimeGate>
         </BrowserRouter>
       </ErrorBoundary>

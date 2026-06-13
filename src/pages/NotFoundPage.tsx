@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export function NotFoundPage() {
   return (
     <div className="text-center py-5">
@@ -5,9 +7,9 @@ export function NotFoundPage() {
       <p className="text-muted">
         The page you requested could not be found.
       </p>
-      <a href="/" className="btn btn-primary">
+      <Link to="/" className="btn btn-primary">
         Go to Dashboard
-      </a>
+      </Link>
     </div>
   );
 }

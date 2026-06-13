@@ -55,6 +55,38 @@ fn init_db_creates_required_tables_and_indices() {
 
 #[test]
 #[serial]
+fn update_config_defaults_and_round_trips() {
+    let _db = TestDb::new();
+    let cfg = get_update_config().unwrap();
+    assert_eq!(cfg.repository_owner, "rattaroaz");
+    assert_eq!(cfg.repository_name, "PaintContractor");
+    assert!(!cfg.check_on_startup);
+    assert!(!cfg.enabled);
+    assert_eq!(cfg.last_check, None);
+
+    let next = UpdateConfig {
+        repository_owner: "owner".into(),
+        repository_name: "repo".into(),
+        check_on_startup: true,
+        enabled: true,
+        last_check: Some("2026-06-13T10:00:00Z".into()),
+    };
+    assert!(save_update_config(next.clone()).unwrap().success);
+    assert_eq!(
+        get_update_config().unwrap().repository_owner,
+        next.repository_owner
+    );
+    assert_eq!(
+        get_update_config().unwrap().repository_name,
+        next.repository_name
+    );
+    assert!(get_update_config().unwrap().check_on_startup);
+    assert!(get_update_config().unwrap().enabled);
+    assert_eq!(get_update_config().unwrap().last_check, next.last_check);
+}
+
+#[test]
+#[serial]
 fn get_next_company_id_advances_after_inserts() {
     let _db = TestDb::new();
     assert_eq!(get_next_company_id().unwrap(), 1000);

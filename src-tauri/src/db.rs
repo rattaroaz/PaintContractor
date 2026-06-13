@@ -36,6 +36,9 @@ pub fn init_db() -> Result<(), String> {
     conn.execute_batch(
         "
         PRAGMA foreign_keys = ON;
+        PRAGMA busy_timeout = 5000;
+        PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
         CREATE TABLE IF NOT EXISTS MyCompanyInfo (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Name TEXT NOT NULL DEFAULT '',
@@ -211,8 +214,8 @@ fn ensure_defaults(conn: &Connection) -> Result<(), String> {
     if cfg_count == 0 {
         let defaults = [
             ("update.repository_owner", "rattaroaz"),
-            ("update.repository_name", "DKSKMaui"),
-            ("update.check_on_startup", "true"),
+            ("update.repository_name", "PaintContractor"),
+            ("update.check_on_startup", "false"),
             ("update.enabled", "false"),
         ];
         for (k, v) in defaults {
