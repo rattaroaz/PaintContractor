@@ -1,10 +1,10 @@
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const tag = process.env.RELEASE_TAG;
 const repo = process.env.GITHUB_REPOSITORY;
-const rustTarget = process.env.RUST_TARGET ?? "aarch64-pc-windows-msvc";
+const rustTarget = process.env.RUST_TARGET;
 const platformKey = process.env.PLATFORM_KEY ?? "windows-aarch64";
 
 if (!tag || !repo) {
@@ -12,7 +12,26 @@ if (!tag || !repo) {
   process.exit(1);
 }
 
-const bundleDir = path.join("src-tauri", "target", rustTarget, "release", "bundle", "nsis");
+function resolveBundleDir() {
+  const candidates = [
+    rustTarget && path.join("src-tauri", "target", rustTarget, "release", "bundle", "nsis"),
+    path.join("src-tauri", "target", "release", "bundle", "nsis"),
+    path.join("src-tauri", "target", "aarch64-pc-windows-msvc", "release", "bundle", "nsis"),
+  ].filter(Boolean);
+
+  for (const dir of candidates) {
+    if (!existsSync(dir)) continue;
+    const files = readdirSync(dir);
+    if (files.some((name) => name.endsWith("-setup.exe") && !name.endsWith(".sig"))) {
+      return dir;
+    }
+  }
+
+  console.error(`No NSIS setup artifacts found. Checked:\n${candidates.join("\n")}`);
+  process.exit(1);
+}
+
+const bundleDir = resolveBundleDir();
 const files = readdirSync(bundleDir);
 const setupFile = files.find((name) => name.endsWith("-setup.exe") && !name.endsWith(".sig"));
 const sigFile = files.find((name) => name.endsWith("-setup.exe.sig"));

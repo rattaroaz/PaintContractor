@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v1.0.1)"
+        description: "Release tag (e.g. v1.0.4)"
         required: true
-        default: "v1.0.0"
+        default: "v1.0.4"
 
 permissions:
   contents: write
@@ -30,8 +30,6 @@ jobs:
       - run: npm ci
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
 
       - name: Normalize signing secrets
         shell: bash
@@ -62,12 +60,12 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          args: --target x86_64-pc-windows-msvc --bundles nsis
+          args: --bundles nsis
 
       - name: Verify NSIS artifact exists
         shell: pwsh
         run: |
-          $setup = Get-ChildItem -Path src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
+          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *-setup.exe -ErrorAction SilentlyContinue
           if (-not $setup) {
             Write-Error "No x64 NSIS setup.exe artifact found after build."
           }
@@ -75,7 +73,7 @@ jobs:
   release-arm64:
     name: Build Windows ARM64
     needs: release-x64
-    runs-on: windows-latest
+    runs-on: windows-11-arm
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,8 +87,6 @@ jobs:
       - run: npm ci
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-pc-windows-msvc
 
       - name: Normalize signing secrets
         shell: bash
@@ -120,12 +116,12 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: false
-          args: --target aarch64-pc-windows-msvc --bundles nsis
+          args: --bundles nsis
 
       - name: Verify NSIS artifact exists
         shell: pwsh
         run: |
-          $setup = Get-ChildItem -Path src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
+          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *-setup.exe -ErrorAction SilentlyContinue
           if (-not $setup) {
             Write-Error "No ARM64 NSIS setup.exe artifact found after build."
           }
@@ -135,6 +131,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name || github.event.inputs.tag }}
-          RUST_TARGET: aarch64-pc-windows-msvc
           PLATFORM_KEY: windows-aarch64
         run: node scripts/merge-updater-platform.mjs
