@@ -153,11 +153,6 @@ th.sortable {
     display: none !important;
   }
 }
-
-.editable-dropdown .input-group {
-  width: 100%;
-}
-
 .card-section {
   background: #fff;
   border-radius: 0.375rem;

@@ -3,6 +3,7 @@ import {
   expectPageTitle,
   expectToast,
   openAddCompanyHub,
+  selectDropdownValue,
   uniqueCompanyId,
   waitForApp,
 } from "../../helpers.js";
@@ -27,10 +28,7 @@ describe("Real runtime — destructive delete (auto-confirm build)", () => {
     await clickNav("Contacts");
     await expectPageTitle(/contacts/i);
 
-    const browse = await $('button[title="Browse all"]');
-    await browse.click();
-    const item = await $(`button.list-group-item*=${name}`);
-    await item.click();
+    await selectDropdownValue(name);
 
     await browser.pause(800);
     const deleteBtn = await $(
@@ -40,12 +38,9 @@ describe("Real runtime — destructive delete (auto-confirm build)", () => {
     await deleteBtn.click();
     await expectToast(/company deleted/i);
 
-    if (await browse.isExisting()) {
-      await browse.click();
-      const gone = await $(
-        `//button[contains(@class,"list-group-item") and contains(., "${name}")]`
-      );
-      expect(await gone.isExisting()).toBe(false);
+    const select = await $("#contacts-company-picker");
+    if (await select.isExisting()) {
+      expect(await select.getValue()).not.toBe(name);
     } else {
       expect(await deleteBtn.isExisting()).toBe(false);
     }

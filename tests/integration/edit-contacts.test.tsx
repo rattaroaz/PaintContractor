@@ -3,6 +3,7 @@
  * save, delete gated by confirmDelete, and validation.
  */
 import { beforeEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import {
@@ -45,9 +46,8 @@ describe("EditCompany", () => {
     const { EditCompany } = await import("../../src/pages/EditCompany");
     renderWithProviders(<EditCompany />);
     await waitFor(() => screen.getByText(/select company/i));
-    fireEvent.change(screen.getByPlaceholderText(/type first letters/i), {
-      target: { value: seed.name },
-    });
+    const picker = screen.getByLabelText(/^company$/i);
+    await userEvent.selectOptions(picker, seed.name);
     // Delete Company only renders when company.id > 0 (proves selection stuck).
     await waitFor(() =>
       screen.getByRole("button", { name: /^delete company$/i })
@@ -64,10 +64,13 @@ describe("EditCompany", () => {
     const seed = await renderAndSelectCompany();
     const nameCol = screen.getByText(/^name \*$/i).closest(".col-md-5")!;
     const nameInput = within(nameCol).getByRole("textbox");
+    const saveBtn = screen.getByRole("button", { name: /^save$/i });
+    expect(saveBtn).toBeDisabled();
     fireEvent.change(nameInput, {
       target: { value: "Beta Corp Updated" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^submit$/i }));
+    expect(saveBtn).not.toBeDisabled();
+    fireEvent.click(saveBtn);
 
     await waitFor(() => {
       expect(getInvokeCallsFor("save_company").length).toBe(1);
@@ -98,19 +101,15 @@ describe("EditCompany", () => {
 });
 
 describe("EditContractor", () => {
-  it("blocks save when name is empty", async () => {
+  it("keeps save disabled until the contractor form is edited", async () => {
     autoConfirm(true);
     mockInvoke("get_all_contractors", async () => []);
 
     const { EditContractor } = await import("../../src/pages/EditContractor");
     renderWithProviders(<EditContractor />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/name is required/i)).toBeInTheDocument();
-      expect(getInvokeCallsFor("save_contractor")).toHaveLength(0);
-    });
+    expect(screen.getByRole("button", { name: /^save$/i })).toBeDisabled();
+    expect(getInvokeCallsFor("save_contractor")).toHaveLength(0);
   });
 
   it("saves contractor when name is provided", async () => {
@@ -133,7 +132,9 @@ describe("EditContractor", () => {
       (el) => (el as HTMLInputElement).value === ""
     ) as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "New Painter" } });
-    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    const saveBtn = screen.getByRole("button", { name: /^save$/i });
+    expect(saveBtn).not.toBeDisabled();
+    fireEvent.click(saveBtn);
 
     await waitFor(() => {
       expect(getInvokeCallsFor("save_contractor").length).toBe(1);
@@ -144,9 +145,9 @@ describe("EditContractor", () => {
     mockInvoke("get_all_contractors", async () => [c]);
     const { EditContractor } = await import("../../src/pages/EditContractor");
     renderWithProviders(<EditContractor />);
-    // Browse button only renders after contractors load; avoids racing the async fetch.
-    fireEvent.click(await screen.findByTitle("Browse all"));
-    fireEvent.click(await screen.findByRole("button", { name: c.name }));
+    const user = userEvent.setup();
+    const picker = await screen.findByLabelText(/^contractor$/i);
+    await user.selectOptions(picker, c.name);
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
     });

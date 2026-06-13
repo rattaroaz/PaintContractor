@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { EditableDropdown } from "../components/EditableDropdown";
+import { FormSelect } from "../components/FormSelect";
 import { useNotification } from "../context/NotificationContext";
 import type { Contractor } from "../types";
 import { confirmDelete } from "../utils/confirm";
@@ -21,10 +21,15 @@ const emptyContractor = (): Contractor => ({
   is_active: true,
 });
 
+function serializeContractor(contractor: Contractor): string {
+  return JSON.stringify(contractor);
+}
+
 export function EditContractor() {
   const { success, error } = useNotification();
   const [all, setAll] = useState<Contractor[]>([]);
   const [contractor, setContractor] = useState<Contractor>(emptyContractor());
+  const [baseline, setBaseline] = useState(serializeContractor(emptyContractor()));
   const [mode, setMode] = useState<"select" | "add">("select");
 
   useEffect(() => {
@@ -39,16 +44,25 @@ export function EditContractor() {
     }
   };
 
+  const applyContractor = (next: Contractor) => {
+    const copy = { ...next };
+    setContractor(copy);
+    setBaseline(serializeContractor(copy));
+  };
+
   const selectByName = (name: string) => {
     const found = all.find((c) => c.name === name);
-    if (found) setContractor({ ...found });
+    if (found) applyContractor(found);
   };
 
   const update = <K extends keyof Contractor>(k: K, v: Contractor[K]) => {
     setContractor((c) => ({ ...c, [k]: v }));
   };
 
+  const isDirty = serializeContractor(contractor) !== baseline;
+
   const handleSave = async () => {
+    if (!isDirty) return;
     if (!contractor.name.trim()) {
       error("Name is required.");
       return;
@@ -58,7 +72,7 @@ export function EditContractor() {
       if (result.success) {
         success("Contractor saved.");
         await load();
-        if (result.data) setContractor(result.data);
+        applyContractor(result.data ?? contractor);
       } else {
         error(result.message);
       }
@@ -74,7 +88,7 @@ export function EditContractor() {
       const result = await api.deleteContractor(contractor.id);
       if (result.success) {
         success(result.message);
-        setContractor(emptyContractor());
+        applyContractor(emptyContractor());
         await load();
       } else {
         error(result.message);
@@ -99,7 +113,7 @@ export function EditContractor() {
           className={`btn btn-sm ${mode === "add" ? "btn-primary" : "btn-outline-primary"}`}
           onClick={() => {
             setMode("add");
-            setContractor(emptyContractor());
+            applyContractor(emptyContractor());
           }}
         >
           Add Contractor
@@ -108,10 +122,15 @@ export function EditContractor() {
 
       {mode === "select" && (
         <div className="mb-3">
-          <EditableDropdown
-            data={all.map((c) => c.name)}
+          <label htmlFor="contacts-contractor-picker" className="form-label">
+            Contractor
+          </label>
+          <FormSelect
+            id="contacts-contractor-picker"
+            options={all.map((c) => c.name)}
             value={contractor.name}
             onChange={selectByName}
+            placeholder="Select…"
           />
         </div>
       )}
@@ -245,6 +264,7 @@ export function EditContractor() {
           <button
             type="button"
             className="btn btn-success w-100"
+            disabled={!isDirty}
             onClick={handleSave}
           >
             Save

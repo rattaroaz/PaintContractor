@@ -372,7 +372,7 @@ describe("AddContactsHubPage", () => {
     expect(screen.getByText(/add contacts/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^contractor$/i }));
     await waitFor(() =>
-      expect(screen.getByPlaceholderText(/type first letters/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/^contractor$/i)).toBeInTheDocument()
     );
   });
 });

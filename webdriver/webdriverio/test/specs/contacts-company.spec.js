@@ -2,6 +2,7 @@ import {
   clickNav,
   expectPageTitle,
   openAddCompanyHub,
+  selectDropdownValue,
   uniqueCompanyId,
   waitForApp,
 } from "../helpers.js";
@@ -27,13 +28,7 @@ describe("Real runtime — Contacts company browse", () => {
     await clickNav("Contacts");
     await expectPageTitle(/contacts/i);
 
-    const browse = await $('button[title="Browse all"]');
-    await browse.waitForClickable({ timeout: 10_000 });
-    await browse.click();
-
-    const item = await $(`button.list-group-item*=${name}`);
-    await item.waitForClickable({ timeout: 8_000 });
-    await item.click();
+    await selectDropdownValue(name);
 
     const nameField = await $('label=Name *').$('..').$('input');
     await nameField.waitForDisplayed({ timeout: 8_000 });

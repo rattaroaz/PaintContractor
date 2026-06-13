@@ -3,6 +3,7 @@ import {
   expectPageTitle,
   expectToast,
   openAddCompanyHub,
+  selectDropdownValue,
   uniqueCompanyId,
   waitForApp,
 } from "../helpers.js";
@@ -29,11 +30,7 @@ describe("Real runtime — Add Company", () => {
 
     await clickNav("Contacts");
     await expectPageTitle(/contacts/i);
-    const browse = await $('button[title="Browse all"]');
-    await browse.click();
-    const item = await $(`//button[contains(@class,"list-group-item") and contains(., "${name}")]`);
-    await item.waitForClickable({ timeout: 10_000 });
-    await item.click();
+    await selectDropdownValue(name);
     const nameField = await $('label=Name *').$('..').$('input');
     expect(await nameField.getValue()).toBe(name);
   });

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { EditableDropdown } from "../components/EditableDropdown";
+import { FormSelect } from "../components/FormSelect";
 import { StartJobConfirmModal } from "../components/modals/StartJobConfirmModal";
 import { Modal } from "../components/Modal";
 import { PageTitle } from "../components/PageTitle";
@@ -214,21 +214,28 @@ export function StartJobPage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Company Name *</label>
-              <EditableDropdown
-                data={companyNames}
+              <label htmlFor="startjob-company" className="form-label">
+                Company Name *
+              </label>
+              <FormSelect
+                id="startjob-company"
+                options={companyNames}
                 value={companyName}
                 onChange={handleCompanyChange}
-                id="startjob-company"
+                placeholder="Select…"
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Property Address *</label>
-              <EditableDropdown
-                data={addresses}
+              <label htmlFor="startjob-property" className="form-label">
+                Property Address *
+              </label>
+              <FormSelect
+                id="startjob-property"
+                options={addresses}
                 value={propertyAddress}
                 onChange={handlePropertyChange}
-                id="startjob-property"
+                placeholder="Select…"
+                disabled={!companyName}
               />
             </div>
             <div className="col-md-3">
@@ -311,14 +318,15 @@ export function StartJobPage() {
               <label className="form-label">Job Description</label>
               {jobRows.map((row, idx) => (
                 <div key={idx} className="input-group mb-2">
-                  <EditableDropdown
-                    data={jobOptions}
+                  <FormSelect
+                    options={jobOptions}
                     value={row}
                     onChange={(v) => {
                       const next = [...jobRows];
                       next[idx] = v;
                       setJobRows(next);
                     }}
+                    placeholder="Select…"
                   />
                   <button
                     type="button"

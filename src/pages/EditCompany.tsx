@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { EditableDropdown } from "../components/EditableDropdown";
+import { FormSelect } from "../components/FormSelect";
 import { useNotification } from "../context/NotificationContext";
 import type { Company, Property, Supervisor } from "../types";
 import { emptyCompanyForm } from "../utils/company";
@@ -32,17 +32,25 @@ const emptyProperty = (supervisorId: number): Property => ({
   supervisor_id: supervisorId,
 });
 
+function serializeCompany(company: Company): string {
+  return JSON.stringify(company);
+}
+
 export function EditCompany() {
   const { success, error } = useNotification();
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
+  const [baseline, setBaseline] = useState("");
   const [mode, setMode] = useState<"select" | "add">("select");
   const [expandedSup, setExpandedSup] = useState<Set<number>>(new Set());
   const [expandedProp, setExpandedProp] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     void load();
-    void emptyCompanyForm().then(setCompany);
+    void emptyCompanyForm().then((empty) => {
+      setCompany(empty);
+      setBaseline(serializeCompany(empty));
+    });
   }, []);
 
   const load = async () => {
@@ -54,22 +62,30 @@ export function EditCompany() {
     }
   };
 
+  const applyCompany = (next: Company) => {
+    const copy = JSON.parse(JSON.stringify(next)) as Company;
+    setCompany(copy);
+    setBaseline(serializeCompany(copy));
+  };
+
   const selectCompany = (name: string) => {
     const found = allCompanies.find((c) => c.name === name);
     if (found) {
-      setCompany(JSON.parse(JSON.stringify(found)) as Company);
+      applyCompany(found);
       setMode("select");
     }
   };
 
   const startAddCompany = async () => {
     setMode("add");
-    setCompany(await emptyCompanyForm());
+    applyCompany(await emptyCompanyForm());
   };
 
   const updateField = <K extends keyof Company>(key: K, value: Company[K]) => {
     setCompany((c) => (c ? { ...c, [key]: value } : c));
   };
+
+  const isDirty = company ? serializeCompany(company) !== baseline : false;
 
   const toggleSup = (idx: number) => {
     setExpandedSup((prev) => {
@@ -90,13 +106,13 @@ export function EditCompany() {
   };
 
   const handleSave = async () => {
-    if (!company) return;
+    if (!company || !isDirty) return;
     try {
       const result = await api.saveCompany(company);
       if (result.success) {
         success("Company saved.");
         await load();
-        if (result.data) setCompany(result.data);
+        applyCompany(result.data ?? company);
       } else {
         error(result.message);
       }
@@ -112,7 +128,8 @@ export function EditCompany() {
       const result = await api.deleteCompany(company.id);
       if (result.success) {
         success(result.message);
-        setCompany(await emptyCompanyForm());
+        const empty = await emptyCompanyForm();
+        applyCompany(empty);
         await load();
       } else {
         error(result.message);
@@ -149,11 +166,15 @@ export function EditCompany() {
 
       {mode === "select" && (
         <div className="mb-3">
-          <label className="form-label">Company</label>
-          <EditableDropdown
-            data={companyNames}
+          <label htmlFor="contacts-company-picker" className="form-label">
+            Company
+          </label>
+          <FormSelect
+            id="contacts-company-picker"
+            options={companyNames}
             value={company.name}
             onChange={selectCompany}
+            placeholder="Select…"
           />
         </div>
       )}
@@ -433,7 +454,7 @@ export function EditCompany() {
         Add Supervisor
       </button>
 
-      <div className="row g-2">
+      <div className="row g-2 mt-3">
         {company.id > 0 && (
           <div className="col-md-6">
             <button
@@ -449,18 +470,10 @@ export function EditCompany() {
           <button
             type="button"
             className="btn btn-success w-100"
+            disabled={!isDirty}
             onClick={handleSave}
           >
-            Submit
-          </button>
-        </div>
-        <div className="col-md-6">
-          <button
-            type="button"
-            className="btn btn-outline-secondary w-100"
-            onClick={() => void startAddCompany()}
-          >
-            Cancel
+            Save
           </button>
         </div>
       </div>

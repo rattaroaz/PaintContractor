@@ -11,7 +11,7 @@ import {
   InvoiceStatus,
   jobNamesFromChoice,
 } from "../../utils/invoice";
-import { EditableDropdown } from "../EditableDropdown";
+import { FormSelect } from "../FormSelect";
 import { Modal } from "../Modal";
 
 interface CreateInvoiceConfirmModalProps {
@@ -266,12 +266,13 @@ export function CreateInvoiceConfirmModal({
         </div>
         <div className="col-md-6">
           <label className="form-label">Contractor</label>
-          <EditableDropdown
-            data={activeContractors}
+          <FormSelect
+            options={activeContractors}
             value={invoice.contractor_name}
             onChange={(v) =>
               setInvoice({ ...invoice, contractor_name: v })
             }
+            placeholder="Select…"
           />
         </div>
         <div className="col-md-3">
@@ -322,10 +323,11 @@ export function CreateInvoiceConfirmModal({
           <label className="form-label">Job Descriptions</label>
           {jobLines.map((line, idx) => (
             <div key={idx} className="input-group mb-2">
-              <EditableDropdown
-                data={jobOptions}
+              <FormSelect
+                options={jobOptions}
                 value={line}
                 onChange={(v) => updateLine(idx, v)}
+                placeholder="Select…"
               />
               <button
                 type="button"

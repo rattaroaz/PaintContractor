@@ -6,16 +6,17 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Start Job", () => {
-  test("loads the form and the seeded company appears in the datalist", async ({ page }) => {
+  test("loads the form and the seeded company appears in the company select", async ({
+    page,
+  }) => {
     await page.goto("/startjob");
     await expect(
       page.getByRole("heading", { name: /start (work order|a? ?job)/i })
     ).toBeVisible();
 
-    const acmeOption = page.locator(
-      "datalist option[value='Acme Properties'], option:has-text('Acme Properties')"
-    );
-    await expect(acmeOption.first()).toHaveCount(1, { timeout: 5_000 });
+    const companySelect = page.locator("#startjob-company");
+    await expect(companySelect).toBeVisible({ timeout: 5_000 });
+    await expect(companySelect).toHaveClass(/form-select/);
   });
 
   test("required form labels are present", async ({ page }) => {

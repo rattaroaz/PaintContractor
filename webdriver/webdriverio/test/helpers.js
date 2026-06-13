@@ -99,3 +99,11 @@ export async function openAddCompanyHub() {
 export function uniqueCompanyId() {
   return 1000 + Math.floor(Math.random() * 8999);
 }
+
+/** Pick a value from a form-select dropdown (Contacts company picker by default). */
+export async function selectDropdownValue(name, selectId = "contacts-company-picker") {
+  const select = await $(`#${selectId}`);
+  await select.waitForDisplayed({ timeout: 10_000 });
+  await select.selectByVisibleText(name);
+  await browser.pause(300);
+}
