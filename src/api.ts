@@ -11,11 +11,13 @@ import type {
   MyCompanyInfo,
   OperationResult,
   PropertyAddressEntry,
+  AppLogEntry,
   UpdateSettings,
 } from "./types";
 
 export const api = {
   getLoggingPaths: () => invokeLogged<LoggingPaths>("get_logging_paths"),
+  getAppLogs: () => invokeLogged<AppLogEntry[]>("get_app_logs"),
   getDatabasePath: () => invokeLogged<string>("get_database_path"),
   createDatabaseBackup: () => invokeLogged<number[]>("create_database_backup"),
   restoreDatabaseFile: (bytes: number[]) =>

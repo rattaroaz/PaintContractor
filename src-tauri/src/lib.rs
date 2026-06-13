@@ -88,6 +88,7 @@ pub fn run() {
             import_sales_csv,
             get_app_version,
             get_logging_paths,
+            get_app_logs,
             log_frontend,
             get_update_config,
             save_update_config,

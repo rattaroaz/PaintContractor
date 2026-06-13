@@ -7,6 +7,7 @@ import { api } from "../../src/api";
 
 const COMMAND_FOR_METHOD: Record<string, string> = {
   getLoggingPaths: "get_logging_paths",
+  getAppLogs: "get_app_logs",
   getDatabasePath: "get_database_path",
   getAppVersion: "get_app_version",
   getMyCompanyInfo: "get_my_company_info",

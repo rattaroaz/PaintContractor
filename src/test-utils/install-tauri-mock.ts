@@ -96,6 +96,7 @@ function registerDefaults(): void {
     database_path: "(mock)/app.db",
     log_directory: "(mock)/logs",
   }));
+  handlers.set("get_app_logs", async () => []);
   handlers.set("log_frontend", async () => null);
   handlers.set("get_app_version", async () => "1.0.0-mock");
 

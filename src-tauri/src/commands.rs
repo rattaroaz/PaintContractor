@@ -63,6 +63,14 @@ pub fn get_logging_paths(app: tauri::AppHandle) -> LoggingPaths {
 }
 
 #[tauri::command]
+pub fn get_app_logs(app: tauri::AppHandle) -> Result<Vec<log_util::AppLogEntry>, String> {
+    log_util::run("get_app_logs", None, || {
+        let log_dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+        log_util::read_app_log_entries(&log_dir)
+    })
+}
+
+#[tauri::command]
 pub fn get_database_path() -> String {
     log_util::run_value("get_database_path", None, || {
         db::db_path().display().to_string()

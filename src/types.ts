@@ -131,6 +131,12 @@ export interface LoggingPaths {
   log_directory: string;
 }
 
+export interface AppLogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+}
+
 export interface CsvCompanyRow {
   name: string;
   owner?: string | null;

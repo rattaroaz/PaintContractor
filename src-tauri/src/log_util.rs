@@ -1,11 +1,19 @@
 use log::{error, info, warn};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::time::Instant;
 
 #[derive(Debug, Serialize)]
 pub struct LoggingPaths {
     pub database_path: String,
     pub log_directory: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppLogEntry {
+    pub timestamp: String,
+    pub level: String,
+    pub message: String,
 }
 
 /// Runs a command that returns `Result<T, String>` with start/ok/error timing logs.
@@ -52,6 +60,67 @@ pub fn log_operation_failure(command: &str, message: &str) {
     );
 }
 
+const MAX_LOG_LINES: usize = 1000;
+
+/// Parses a line written by `tauri-plugin-log`: `[date][time][target][LEVEL] message`.
+pub fn parse_plugin_log_line(line: &str) -> Option<AppLogEntry> {
+    let mut rest = line.trim();
+    if rest.is_empty() {
+        return None;
+    }
+
+    let mut fields: Vec<&str> = Vec::with_capacity(4);
+    for _ in 0..4 {
+        if !rest.starts_with('[') {
+            return None;
+        }
+        let end = rest.find(']')?;
+        fields.push(&rest[1..end]);
+        rest = &rest[end + 1..];
+    }
+
+    Some(AppLogEntry {
+        timestamp: format!("{} {}", fields[0], fields[1]),
+        level: fields[3].to_lowercase(),
+        message: rest.trim().to_string(),
+    })
+}
+
+pub fn read_app_log_entries(log_dir: &std::path::Path) -> Result<Vec<AppLogEntry>, String> {
+    if !log_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut log_files: Vec<PathBuf> = Vec::new();
+    for entry in std::fs::read_dir(log_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name == "app.log" || name.starts_with("app.log.") {
+            log_files.push(entry.path());
+        }
+    }
+
+    log_files.sort_by_key(|path| {
+        std::fs::metadata(path)
+            .and_then(|meta| meta.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+    });
+
+    let mut lines: Vec<String> = Vec::new();
+    for path in log_files {
+        let content = std::fs::read_to_string(&path).unwrap_or_default();
+        for line in content.lines() {
+            lines.push(line.to_string());
+        }
+    }
+
+    let start = lines.len().saturating_sub(MAX_LOG_LINES);
+    Ok(lines[start..]
+        .iter()
+        .filter_map(|line| parse_plugin_log_line(line))
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::log_operation_failure;
@@ -87,6 +156,27 @@ mod tests {
             log::set_max_level(LevelFilter::Warn);
             logger
         })
+    }
+
+    #[test]
+    fn parse_plugin_log_line_reads_tauri_plugin_format() {
+        use super::parse_plugin_log_line;
+
+        let entry = parse_plugin_log_line(
+            "[2026-06-06][12:34:56][frontend][INFO] Update check started {\"category\":\"update\"}",
+        )
+        .expect("parsed");
+        assert_eq!(entry.timestamp, "2026-06-06 12:34:56");
+        assert_eq!(entry.level, "info");
+        assert!(entry.message.contains("Update check started"));
+    }
+
+    #[test]
+    fn parse_plugin_log_line_rejects_blank_lines() {
+        use super::parse_plugin_log_line;
+
+        assert!(parse_plugin_log_line("").is_none());
+        assert!(parse_plugin_log_line("not a log line").is_none());
     }
 
     #[test]

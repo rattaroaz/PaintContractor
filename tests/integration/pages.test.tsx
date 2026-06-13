@@ -4,6 +4,7 @@
  * application's context providers and validates the most user-impactful flow.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import {
   fireEvent,
   render,
@@ -344,6 +345,31 @@ describe("UpdateSettingsPage", () => {
     expect(
       screen.getByRole("button", { name: /check for updates/i })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /show logs/i })
+    ).toBeInTheDocument();
+  });
+
+  it("shows log list with level filter when Show logs is clicked", async () => {
+    const user = userEvent.setup();
+    const { UpdateSettingsPage } = await import(
+      "../../src/pages/UpdateSettingsPage"
+    );
+    const { logger } = await import("../../src/utils/logger");
+
+    logger.info("Update check started", { category: "update" });
+    logger.error("Update check failed", { category: "update", error: "404" });
+
+    renderWithApp(<UpdateSettingsPage />, "/settings/updates");
+    await user.click(screen.getByRole("button", { name: /show logs/i }));
+
+    expect(screen.getByLabelText(/level/i)).toBeInTheDocument();
+    expect(screen.getByText(/Update check started/)).toBeInTheDocument();
+    expect(screen.getByText(/Update check failed/)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/level/i), "error");
+    expect(screen.queryByText(/Update check started/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Update check failed/)).toBeInTheDocument();
   });
 });
 

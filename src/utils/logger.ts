@@ -2,6 +2,14 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
+export type { LogLevel };
+
+export interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+}
+
 interface LogContext {
   [key: string]: unknown;
 }
@@ -98,24 +106,49 @@ function shouldLogApiDebug(): boolean {
   return isDevBuild();
 }
 
+const MAX_BUFFER = 500;
+const buffer: LogEntry[] = [];
+
+function pushToBuffer(level: LogLevel, message: string, context?: LogContext) {
+  const safe = redactContext(context);
+  const ctx =
+    safe && Object.keys(safe).length > 0 ? ` ${JSON.stringify(safe)}` : "";
+  buffer.push({
+    timestamp: new Date().toISOString(),
+    level,
+    message: `${message}${ctx}`,
+  });
+  if (buffer.length > MAX_BUFFER) {
+    buffer.shift();
+  }
+}
+
+export function getLogBuffer(): LogEntry[] {
+  return [...buffer];
+}
+
 export const logger = {
   info(message: string, context?: LogContext) {
+    pushToBuffer("info", message, context);
     const line = format("info", message, context);
     console.info(line);
     void sendToBackend("info", message, context);
   },
   warn(message: string, context?: LogContext) {
+    pushToBuffer("warn", message, context);
     const line = format("warn", message, context);
     console.warn(line);
     void sendToBackend("warn", message, context);
   },
   error(message: string, context?: LogContext) {
+    pushToBuffer("error", message, context);
     const line = format("error", message, context);
     console.error(line);
     void sendToBackend("error", message, context);
   },
   debug(message: string, context?: LogContext) {
     if (!isDevBuild()) return;
+    pushToBuffer("debug", message, context);
     const line = format("debug", message, context);
     console.debug(line);
     void sendToBackend("debug", message, context);
