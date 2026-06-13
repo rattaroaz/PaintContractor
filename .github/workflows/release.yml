@@ -17,6 +17,8 @@ jobs:
   release-x64:
     name: Build Windows x64
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +51,18 @@ jobs:
             echo "EOF"
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$trimmed_password"
           } >> "$GITHUB_ENV"
+
+      - name: Ensure GitHub release exists
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name || github.event.inputs.tag }}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "DKSK Paint Contractor ${TAG}" \
+              --notes "See the assets to download and install this version."
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -73,7 +87,9 @@ jobs:
   release-arm64:
     name: Build Windows ARM64
     needs: release-x64
-    runs-on: windows-11-arm
+    runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,6 +103,11 @@ jobs:
       - run: npm ci
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
+      - name: Install LLVM (ring build scripts on cross-target Windows builds)
+        run: choco install llvm -y --no-progress
 
       - name: Normalize signing secrets
         shell: bash
@@ -107,6 +128,12 @@ jobs:
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$trimmed_password"
           } >> "$GITHUB_ENV"
 
+      - name: Configure clang for Cargo
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\LLVM\bin"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=clang"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,12 +143,13 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: false
-          args: --bundles nsis
+          args: --target aarch64-pc-windows-msvc --bundles nsis
 
       - name: Verify NSIS artifact exists
         shell: pwsh
         run: |
-          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *-setup.exe -ErrorAction SilentlyContinue
+          $bundleRoot = "src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis"
+          $setup = Get-ChildItem -Path $bundleRoot -Filter *-setup.exe -ErrorAction SilentlyContinue
           if (-not $setup) {
             Write-Error "No ARM64 NSIS setup.exe artifact found after build."
           }
@@ -131,5 +159,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name || github.event.inputs.tag }}
+          RUST_TARGET: aarch64-pc-windows-msvc
           PLATFORM_KEY: windows-aarch64
         run: node scripts/merge-updater-platform.mjs
