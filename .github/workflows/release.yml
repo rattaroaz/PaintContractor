@@ -14,8 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and publish Windows release
+  release-x64:
+    name: Build Windows x64
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +30,8 @@ jobs:
       - run: npm ci
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - name: Normalize signing secrets
         shell: bash
@@ -60,12 +62,79 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          args: --bundles nsis
+          args: --target x86_64-pc-windows-msvc --bundles nsis
 
       - name: Verify NSIS artifact exists
         shell: pwsh
         run: |
-          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
+          $setup = Get-ChildItem -Path src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
           if (-not $setup) {
-            Write-Error "No NSIS setup.exe artifact found after build."
+            Write-Error "No x64 NSIS setup.exe artifact found after build."
           }
+
+  release-arm64:
+    name: Build Windows ARM64
+    needs: release-x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
+      - name: Normalize signing secrets
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          RAW_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          trimmed_key="$(printf '%s' "$RAW_KEY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          trimmed_password="$(printf '%s' "$RAW_PASSWORD" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -z "$trimmed_key" ] || [ -z "$trimmed_password" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD must be set."
+            exit 1
+          fi
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo "$trimmed_key"
+            echo "EOF"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$trimmed_password"
+          } >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name || github.event.inputs.tag }}
+          releaseName: "DKSK Paint Contractor ${{ github.ref_name || github.event.inputs.tag }}"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: false
+          args: --target aarch64-pc-windows-msvc --bundles nsis
+
+      - name: Verify NSIS artifact exists
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis -Filter *-setup.exe -Recurse -ErrorAction SilentlyContinue
+          if (-not $setup) {
+            Write-Error "No ARM64 NSIS setup.exe artifact found after build."
+          }
+
+      - name: Merge ARM64 into latest.json
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name || github.event.inputs.tag }}
+          RUST_TARGET: aarch64-pc-windows-msvc
+          PLATFORM_KEY: windows-aarch64
+        run: node scripts/merge-updater-platform.mjs

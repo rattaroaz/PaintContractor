@@ -2437,7 +2437,7 @@ dependencies = [
 
 [[package]]
 name = "paint-contractor"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "chrono",
  "dirs 5.0.1",

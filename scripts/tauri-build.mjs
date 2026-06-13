@@ -1,7 +1,8 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureNativeToolchain } from "./ensure-native-toolchain.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -37,14 +38,21 @@ if (!hasKey) {
   );
 }
 
-const args = ["run", "tauri", "--", "build"];
+const tauriCli = path.join(root, "node_modules", "@tauri-apps", "cli", "tauri.js");
+
+const args = ["build"];
 if (configOverride) {
   args.push("-c", configOverride);
 }
 
-execSync(`npm ${args.map((a) => `"${a}"`).join(" ")}`, {
+const buildEnv = ensureNativeToolchain({ ...process.env });
+
+const result = spawnSync(process.execPath, [tauriCli, ...args], {
   cwd: root,
   stdio: "inherit",
-  env: process.env,
-  shell: true,
+  env: buildEnv,
 });
+
+if (result.status !== 0) {
+  process.exit(result.status ?? 1);
+}

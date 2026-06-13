@@ -91,6 +91,20 @@ describe("checkForUpdatesAndApply", () => {
     expect(dialog.calls.at(-1)?.message).toMatch(/no update feed is published/i);
   });
 
+  it("shows platform guidance when latest.json lacks windows-aarch64", async () => {
+    check.mockRejectedValue(
+      new Error(
+        'None of the fallback platforms `["windows-aarch64"]` were found in the response `platforms` object'
+      )
+    );
+    const dialog = createDialog();
+
+    await checkForUpdatesAndApply(dialog);
+
+    expect(dialog.calls.at(-1)?.phase).toBe("error");
+    expect(dialog.calls.at(-1)?.message).toMatch(/windows on arm/i);
+  });
+
   it("shows generic error for other failures", async () => {
     check.mockRejectedValue(new Error("network down"));
     const dialog = createDialog();
