@@ -326,6 +326,8 @@ export function JobCatalogPage() {
             {rows.map((row, idx) => (
               <div
                 key={`${row.savedDescription || "new"}-${idx}`}
+                data-testid="job-catalog-row"
+                data-job-description={row.savedDescription || row.description}
                 className={`row g-2 mb-2 align-items-center p-2 rounded ${
                   row.isNew ? "row-new-job" : "row-existing-job"
                 }`}

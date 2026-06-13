@@ -30,7 +30,9 @@ function renderPage() {
 }
 
 function getRows(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll(".row-new-job, .row-existing-job"));
+  return Array.from(
+    container.querySelectorAll('[data-testid="job-catalog-row"]')
+  );
 }
 
 const seed = [

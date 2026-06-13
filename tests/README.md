@@ -5,6 +5,32 @@ TypeScript frontend and the Rust/Tauri backend. Everything is wired to
 `npm` and `cargo` scripts so a single command can run any individual
 layer or the full pyramid.
 
+## Resilience principles (avoid brittle tests)
+
+UI refactors should not break the suite. Follow this selector order:
+
+1. **Accessible names** — `getByRole`, `getByLabelText` (what users see)
+2. **`data-testid`** — only for unstable layout (e.g. job catalog rows)
+3. **Never** — CSS classes, XPath ancestors, placeholder text, button glyphs
+
+**What each layer owns**
+
+| Layer | Owns | Should not own |
+|-------|------|----------------|
+| Unit / property | Pure logic, math, validation | DOM structure |
+| Contract | Wire-format field names | UI labels |
+| Integration | Page wiring, IPC side effects, multi-step flows | Full browser boot |
+| Smoke | Every route mounts (`SMOKE_ROUTES`) | Business logic |
+| E2E (Playwright) | Thin critical paths through real router | Logic already in integration |
+| WebDriver | Real SQLite + native plugins | Flows covered by Playwright mock |
+
+**Playwright helpers** (`tests/e2e/helpers/`)
+
+- `selectors.ts` — shared label/role locators
+- `ipc-mock.ts` — shared invoke hijacks and `expectEventually` (no `waitForTimeout`)
+
+When you change a dropdown, label, or form control: update **one** helper or integration test, not every E2E spec. If integration already covers the flow, do not duplicate it in E2E.
+
 ## Layout
 
 ```
@@ -19,7 +45,8 @@ tests/
   snapshot/             Vitest DOM-fragment snapshots
   a11y/                 axe-core accessibility audits
   smoke/                Playwright route smoke matrix (every route mounts)
-  e2e/                  Playwright full user-flow specs
+  e2e/                  Playwright critical-path specs
+  e2e/helpers/          Shared Playwright selectors + IPC mock utilities
 
 src-tauri/
   src/db.rs                         -> `#[cfg(test)] mod tests` (unit)
@@ -161,7 +188,7 @@ WebDriver-automatable.
 | Rust snapshot (insta)         | 1     | 7     |
 | Rust contract                 | 1     | 12    |
 | Playwright smoke              | 2     | 18    |
-| Playwright E2E                | 5     | 13    |
+| Playwright E2E                | 6     | ~14   |
 | WebDriverIO (real runtime)    | 8     | ~20   |
 | **Total**                     | **56**| **~400** |
 

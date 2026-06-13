@@ -1,28 +1,18 @@
 /**
- * E2E tests covering the full invoice lifecycle: start job → review → submit
- * (becomes a draft) → edit → accounts receivable payment → fully paid.
- *
- * Runs against the real React production build with the mocked Tauri IPC.
+ * E2E: accounts receivable payment through the real router + mock IPC.
+ * Backup, contacts tabs, and add-company flows are in tests/integration/pages.test.tsx.
  */
 import { expect, test } from "@playwright/test";
+import { expectEventually, INSTALL_DIALOG_HANDLERS_SCRIPT } from "./helpers/ipc-mock";
 
 test.describe("Invoice lifecycle", () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(INSTALL_DIALOG_HANDLERS_SCRIPT);
     await page.addInitScript(() => {
       const w = window as unknown as {
-        __installMockHandler__?: (cmd: string, fn: (a: unknown) => unknown) => void;
         __mockStores__?: { invoices: unknown[] };
       };
-      const wait = setInterval(() => {
-        if (w.__installMockHandler__) {
-          // Always confirm destructive ops.
-          w.__installMockHandler__("plugin:dialog|message", async () => "Yes");
-          w.__installMockHandler__("plugin:dialog|ask", async () => true);
-          // Reset between scenarios.
-          if (w.__mockStores__) w.__mockStores__.invoices = [];
-          clearInterval(wait);
-        }
-      }, 25);
+      if (w.__mockStores__) w.__mockStores__.invoices = [];
     });
   });
 
@@ -57,9 +47,8 @@ test.describe("Invoice lifecycle", () => {
       const state = { invoice: { ...SEED } };
       (window as unknown as { __ar_state__: typeof state }).__ar_state__ = state;
 
-      // Intercept __TAURI_INTERNALS__ assignment so we can hijack invoke
-      // BEFORE any React component renders.
-      let real: { invoke: (cmd: string, args?: unknown) => Promise<unknown> } | null = null;
+      let real: { invoke: (cmd: string, args?: unknown) => Promise<unknown> } | null =
+        null;
       Object.defineProperty(window, "__TAURI_INTERNALS__", {
         configurable: true,
         set(v: { invoke: (cmd: string, args?: unknown) => Promise<unknown> }) {
@@ -104,77 +93,23 @@ test.describe("Invoice lifecycle", () => {
       page.locator("table tbody tr").filter({ hasText: "Acme Properties" }).first()
     ).toBeVisible();
 
-    // Select the row so the payment inputs are revealed.
-    const checkboxes = page.locator("input[type='checkbox']");
-    await checkboxes.first().check();
-
-    const paidInput = page.locator("input[type='number']").first();
-    await paidInput.fill("200");
+    const row = page
+      .locator("table tbody tr")
+      .filter({ hasText: "Acme Properties" })
+      .first();
+    await row.getByRole("checkbox").check();
+    await row.getByRole("spinbutton").first().fill("200");
     await page.getByRole("button", { name: /^done$/i }).click();
-    await page.waitForTimeout(500);
 
-    const remaining = await page.evaluate(
+    await expectEventually(
       () =>
-        (window as unknown as {
-          __ar_state__?: { invoice: { amount_paid1: number } };
-        }).__ar_state__?.invoice?.amount_paid1 ?? 0
+        page.evaluate(
+          () =>
+            (window as unknown as {
+              __ar_state__?: { invoice: { amount_paid1: number } };
+            }).__ar_state__?.invoice?.amount_paid1 ?? 0
+        ),
+      200
     );
-    expect(remaining).toBe(200);
-  });
-});
-
-test.describe("Import / Export", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      const w = window as unknown as {
-        __installMockHandler__?: (cmd: string, fn: (a: unknown) => unknown) => void;
-      };
-      const wait = setInterval(() => {
-        if (w.__installMockHandler__) {
-          let saveCalls = 0;
-          w.__installMockHandler__("plugin:dialog|save", async () => {
-            saveCalls++;
-            (w as unknown as { __save_calls__: number }).__save_calls__ =
-              saveCalls;
-            return "/tmp/backup.db";
-          });
-          w.__installMockHandler__("plugin:fs|write_file", async () => null);
-          clearInterval(wait);
-        }
-      }, 25);
-    });
-  });
-
-  test("create backup triggers the save dialog and writes the file", async ({ page }) => {
-    await page.goto("/importexport");
-    await expect(page.getByRole("heading", { name: /import.*export.*backup/i })).toBeVisible();
-    await page.getByRole("button", { name: /^create backup/i }).click();
-    await page.waitForTimeout(500);
-    const calls = await page.evaluate(
-      () => (window as unknown as { __save_calls__?: number }).__save_calls__ ?? 0
-    );
-    expect(calls).toBeGreaterThanOrEqual(1);
-  });
-});
-
-test.describe("Contacts page", () => {
-  test("toggles between Company and Contractor tabs", async ({ page }) => {
-    await page.goto("/editviewcontacts");
-    await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
-    await page.getByRole("button", { name: /^contractor$/i }).click();
-    // The contractor edit form mounts and exposes a name field/control.
-    await expect(
-      page.getByText(/name/i).first()
-    ).toBeVisible({ timeout: 5_000 });
-  });
-});
-
-test.describe("Add Company", () => {
-  test("renders the form with the suggested next CompanyID", async ({ page }) => {
-    await page.goto("/addcontacts/addcompany");
-    await expect(page.getByRole("heading", { name: /add.*company/i })).toBeVisible();
-    // CompanyID seeded by get_next_company_id mock.
-    const cidField = page.locator("input").filter({ hasText: "" }).first();
-    await expect(cidField).toBeVisible();
   });
 });
