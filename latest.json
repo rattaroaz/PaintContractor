@@ -1,0 +1,23 @@
+{
+  "version": "1.1.0",
+  "notes": "",
+  "pub_date": "2026-06-13T18:11:48.508Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSMEk2VFdiZDhKR3ZJMHJtQjI2MUdGOUJya0lNVXl6bGlCVlhuam5pYkI3UG1mVDRTUW5yMTBQZEtRL2JJbmZXaVZ5SWlyeHZxaGQwUUEzMG1wWnFvRFVJenB0d3dScUFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMzc0MzA2CWZpbGU6REtTSyBQYWludCBDb250cmFjdG9yXzEuMS4wX3g2NC1zZXR1cC5leGUKS0NHaU5GaU95MDdONGZlL2hWbmIyaU95MUFibjBCaVBERUZlcSs5cnA5QUxtZkwrTnA3ZWs4V1VZMk1KaVJlcE9TRU5ZRG94MlQwMFhHOEZHK0pwQ3c9PQo=",
+      "url": "https://github.com/rattaroaz/PaintContractor/releases/download/v1.1.0/DKSK.Paint.Contractor_1.1.0_x64-setup.exe"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSMEk2VFdiZDhKR3ZJMHJtQjI2MUdGOUJya0lNVXl6bGlCVlhuam5pYkI3UG1mVDRTUW5yMTBQZEtRL2JJbmZXaVZ5SWlyeHZxaGQwUUEzMG1wWnFvRFVJenB0d3dScUFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMzc0MzA2CWZpbGU6REtTSyBQYWludCBDb250cmFjdG9yXzEuMS4wX3g2NC1zZXR1cC5leGUKS0NHaU5GaU95MDdONGZlL2hWbmIyaU95MUFibjBCaVBERUZlcSs5cnA5QUxtZkwrTnA3ZWs4V1VZMk1KaVJlcE9TRU5ZRG94MlQwMFhHOEZHK0pwQ3c9PQo=",
+      "url": "https://github.com/rattaroaz/PaintContractor/releases/download/v1.1.0/DKSK.Paint.Contractor_1.1.0_x64-setup.exe"
+    },
+    "windows-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSMEk2VFdiZDhKR213Znk5dC9ZalRYVUJjeTVCNHFEL1VTMGI4TVFXV3hDUHRMQmM0aFF5LzB1amM4NENybWNaeXVsVml6WjNwZDB2MFBvQmw2VG1QSEZxcUMwVHNoYVFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMzc0ODg3CWZpbGU6REtTSyBQYWludCBDb250cmFjdG9yXzEuMS4wX2FybTY0LXNldHVwLmV4ZQpGVXZPVHZTcktNcmg0S1gycVdaTjdLS1dZbEdoZXBWN21HckJOMmZSeDJ4WVNPQ3UwRzI1dVN0dzRxa1BvYi8rR0xsdElyK2YwM2swVUtTRjlTK0hEdz09Cg==",
+      "url": "https://github.com/rattaroaz/PaintContractor/releases/download/v1.1.0/DKSK.Paint.Contractor_1.1.0_arm64-setup.exe"
+    },
+    "windows-aarch64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSMEk2VFdiZDhKR213Znk5dC9ZalRYVUJjeTVCNHFEL1VTMGI4TVFXV3hDUHRMQmM0aFF5LzB1amM4NENybWNaeXVsVml6WjNwZDB2MFBvQmw2VG1QSEZxcUMwVHNoYVFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgxMzc0ODg3CWZpbGU6REtTSyBQYWludCBDb250cmFjdG9yXzEuMS4wX2FybTY0LXNldHVwLmV4ZQpGVXZPVHZTcktNcmg0S1gycVdaTjdLS1dZbEdoZXBWN21HckJOMmZSeDJ4WVNPQ3UwRzI1dVN0dzRxa1BvYi8rR0xsdElyK2YwM2swVUtTRjlTK0hEdz09Cg==",
+      "url": "https://github.com/rattaroaz/PaintContractor/releases/download/v1.1.0/DKSK.Paint.Contractor_1.1.0_arm64-setup.exe"
+    }
+  }
+}

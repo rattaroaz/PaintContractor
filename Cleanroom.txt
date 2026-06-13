@@ -169,9 +169,7 @@ Sidebar order (top to bottom), grouped by section header:
   SYSTEM
     Import / Export / Backup → /importexport        (icon: import_export)
     System Tests           → /test                  (icon: bug_report)
-      [Runtime diagnostic page that tests DB connectivity and update service;
-       see §9.21. Functional content is omitted from this spec per the
-       "no testing/logging" exclusion; the nav entry itself is part of the UI.]
+ 
 
   SETTINGS
     Update Settings        → /settings/updates      (icon: settings)

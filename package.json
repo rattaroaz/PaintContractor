@@ -12,6 +12,7 @@
     "build:win:signed": "node scripts/tauri-build.mjs --signed",
     "check:version": "node scripts/check-version-sync.mjs",
     "validate:latest-json": "node scripts/validate-latest-json.mjs",
+    "repair:latest-json": "node scripts/repair-latest-json-urls.mjs",
     "preview": "vite preview",
     "tauri": "node scripts/tauri-cli.mjs",
     "test": "vitest run",

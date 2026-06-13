@@ -5,35 +5,35 @@ import { APP_NAME, APP_VERSION } from "@/lib/constants";
 import { isVersionNewer } from "@/lib/semver";
 import type { UpdateDialogApi } from "@/context/UpdateDialogContext";
 import { logger } from "@/utils/logger";
+import { resolveUpdateErrorMessage } from "./updateErrors";
+import type { PaintUpdaterMock, UpdaterCheckResult } from "./updaterTypes";
 
-const UPDATE_FEED_UNAVAILABLE_MESSAGE =
-  "No update feed is published yet. The GitHub Release workflow must complete successfully " +
-  "and publish latest.json plus signed installers. Check Actions → Release on GitHub.";
-
-const UNSUPPORTED_PLATFORM_MESSAGE =
-  "This PC uses Windows on ARM, but the published update feed does not include a matching " +
-  "windows-aarch64 installer yet. Install the ARM64 setup from GitHub Releases, or publish a " +
-  "new release after the Release workflow builds both x64 and ARM64.";
+export {
+  UPDATE_FEED_UNAVAILABLE_MESSAGE,
+  UNSUPPORTED_PLATFORM_MESSAGE,
+} from "./updateErrors";
 
 function upToDateMessage(): string {
   return `${APP_NAME} is up to date (version ${APP_VERSION}).`;
 }
 
-function isFeedUnavailableError(message: string): boolean {
-  const lower = message.toLowerCase();
-  return (
-    lower.includes("could not fetch a valid release json") ||
-    lower.includes("failed to fetch") ||
-    lower.includes("404") ||
-    lower.includes("not found")
-  );
-}
-
-function isUnsupportedPlatformError(message: string): boolean {
-  return (
-    message.includes("were found in the response `platforms` object") ||
-    message.includes("fallback platforms")
-  );
+function getUpdaterDeps(): {
+  check: (options?: { allowDowngrades?: boolean }) => Promise<UpdaterCheckResult | null>;
+  relaunch: () => Promise<void>;
+} {
+  if (import.meta.env.VITE_TAURI_MOCK === "1" && typeof window !== "undefined") {
+    const mock: PaintUpdaterMock | undefined = window.__paintUpdaterMock;
+    if (mock) {
+      return {
+        check: mock.check,
+        relaunch: mock.relaunch ?? (() => relaunch()),
+      };
+    }
+  }
+  return {
+    check: (options) => check(options) as Promise<UpdaterCheckResult | null>,
+    relaunch: () => relaunch(),
+  };
 }
 
 export async function checkForUpdatesAndApply(
@@ -57,6 +57,8 @@ export async function checkForUpdatesAndApply(
     return;
   }
 
+  const { check: runCheck, relaunch: runRelaunch } = getUpdaterDeps();
+
   dialog.openUpdateDialog();
   dialog.setUpdateDialog({
     phase: "checking",
@@ -69,7 +71,7 @@ export async function checkForUpdatesAndApply(
   });
 
   try {
-    const update = await check({ allowDowngrades: false });
+    const update = await runCheck({ allowDowngrades: false });
 
     if (!update || !isVersionNewer(update.version, APP_VERSION)) {
       const remote = update?.version ?? APP_VERSION;
@@ -110,7 +112,7 @@ export async function checkForUpdatesAndApply(
     });
 
     logger.info("Update install complete; relaunching", { category: "update" });
-    await relaunch();
+    await runRelaunch();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("Update check failed", {
@@ -118,25 +120,9 @@ export async function checkForUpdatesAndApply(
       error: message,
     });
 
-    if (isFeedUnavailableError(message)) {
-      dialog.setUpdateDialog({
-        phase: "error",
-        message: UPDATE_FEED_UNAVAILABLE_MESSAGE,
-      });
-      return;
-    }
-
-    if (isUnsupportedPlatformError(message)) {
-      dialog.setUpdateDialog({
-        phase: "error",
-        message: UNSUPPORTED_PLATFORM_MESSAGE,
-      });
-      return;
-    }
-
     dialog.setUpdateDialog({
       phase: "error",
-      message: `Update check failed: ${message}`,
+      message: resolveUpdateErrorMessage(message),
     });
   }
 }

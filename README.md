@@ -139,5 +139,5 @@ npm run test:full     # test:all + both WebDriver suites (pre-release / local)
 
 - Invoice display number = `Id + 10000`
 - Invoice statuses: Draft (0), Submitted (1), Paid (2)
-- System Tests (`/test`) nav entry is omitted per cleanroom scope
-- Legacy routes (`/counter`, `/weather`, etc.) are not implemented
+
+

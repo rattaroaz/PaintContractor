@@ -12,6 +12,19 @@ if (!tag || !repo) {
   process.exit(1);
 }
 
+/** tauri-action uploads NSIS assets with dots instead of spaces in the product name. */
+function toReleaseAssetName(localFileName) {
+  return localFileName.replace(/ /g, ".");
+}
+
+function encodeReleaseAssetUrl(releaseFileName) {
+  const encodedName = releaseFileName
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `https://github.com/${repo}/releases/download/${tag}/${encodedName}`;
+}
+
 function resolveBundleDir() {
   const candidates = [
     rustTarget && path.join("src-tauri", "target", rustTarget, "release", "bundle", "nsis"),
@@ -31,6 +44,33 @@ function resolveBundleDir() {
   process.exit(1);
 }
 
+function resolveAssetNameFromRelease(localSetupFile) {
+  const view = spawnSync(
+    "gh",
+    ["release", "view", tag, "--repo", repo, "--json", "assets"],
+    { encoding: "utf8" }
+  );
+  if (view.status === 0 && view.stdout) {
+    try {
+      const { assets = [] } = JSON.parse(view.stdout);
+      const suffix = localSetupFile.includes("arm64") ? "arm64-setup.exe" : "setup.exe";
+      const match = assets.find(
+        (asset) =>
+          typeof asset.name === "string" &&
+          asset.name.endsWith(suffix) &&
+          !asset.name.endsWith(".sig")
+      );
+      if (match?.name) {
+        return match.name;
+      }
+    } catch {
+      // fall through to normalized local name
+    }
+  }
+
+  return toReleaseAssetName(localSetupFile);
+}
+
 const bundleDir = resolveBundleDir();
 const files = readdirSync(bundleDir);
 const setupFile = files.find((name) => name.endsWith("-setup.exe") && !name.endsWith(".sig"));
@@ -42,10 +82,11 @@ if (!setupFile || !sigFile) {
 }
 
 const signature = readFileSync(path.join(bundleDir, sigFile), "utf8").trim();
-const url = `https://github.com/${repo}/releases/download/${tag}/${setupFile}`;
+const releaseAssetName = resolveAssetNameFromRelease(setupFile);
+const url = encodeReleaseAssetUrl(releaseAssetName);
 const latestUrl = `https://github.com/${repo}/releases/download/${tag}/latest.json`;
 
-const response = await fetch(latestUrl);
+const response = await fetch(latestUrl, { cache: "no-store" });
 if (!response.ok) {
   console.error(`Failed to fetch latest.json (${response.status}) from ${latestUrl}`);
   process.exit(1);
@@ -58,7 +99,7 @@ latest.platforms[`${platformKey}-nsis`] = entry;
 
 writeFileSync("latest.json", `${JSON.stringify(latest, null, 2)}\n`);
 
-const upload = spawnSync("gh", ["release", "upload", tag, "latest.json", "--clobber"], {
+const upload = spawnSync("gh", ["release", "upload", tag, "latest.json", "--repo", repo, "--clobber"], {
   stdio: "inherit",
 });
 
@@ -66,4 +107,6 @@ if (upload.status !== 0) {
   process.exit(upload.status ?? 1);
 }
 
-console.log(`Updated latest.json with ${platformKey} and ${platformKey}-nsis`);
+console.log(
+  `Updated latest.json with ${platformKey} and ${platformKey}-nsis (asset: ${releaseAssetName})`
+);

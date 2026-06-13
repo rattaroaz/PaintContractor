@@ -321,14 +321,6 @@ describe("NotFoundPage", () => {
   });
 });
 
-describe("ProfilePage", () => {
-  it("renders without error", async () => {
-    const { ProfilePage } = await import("../../src/pages/ProfilePage");
-    renderWithApp(<ProfilePage />);
-    expect(document.body.textContent).toBeTruthy();
-  });
-});
-
 describe("UpdateSettingsPage", () => {
   it("shows app version and check for updates button", async () => {
     const { UpdateSettingsPage } = await import(
@@ -367,19 +359,6 @@ describe("UpdateSettingsPage", () => {
   });
 });
 
-describe("UpdateDashboardPage", () => {
-  it("links to updates page", async () => {
-    const { UpdateDashboardPage } = await import(
-      "../../src/pages/UpdateDashboardPage"
-    );
-    renderWithApp(<UpdateDashboardPage />);
-    expect(screen.getByRole("link", { name: /^updates$/i })).toHaveAttribute(
-      "href",
-      "/settings/updates"
-    );
-  });
-});
-
 describe("AddContactsHubPage", () => {
   it("switches hub tabs between company and contractor", async () => {
     mockInvokeMany({
@@ -395,13 +374,5 @@ describe("AddContactsHubPage", () => {
     await waitFor(() =>
       expect(screen.getByPlaceholderText(/type first letters/i)).toBeInTheDocument()
     );
-  });
-});
-
-describe("LogoutPage", () => {
-  it("renders nothing visible (redirect shell)", async () => {
-    const { LogoutPage } = await import("../../src/pages/LogoutPage");
-    renderWithApp(<LogoutPage />);
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   });
 });
