@@ -119,7 +119,8 @@ test.describe("Updater UI", () => {
     await openUpdatesAndCheck(page);
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText(/signature verification failed/i)).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: /update error/i })).toBeVisible();
+    await expect(dialog.getByText(/could not be verified/i)).toBeVisible();
     const relaunchCalled = await page.evaluate(
       () => (window as unknown as { __relaunchCalled?: boolean }).__relaunchCalled
     );
