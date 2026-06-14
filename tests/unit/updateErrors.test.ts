@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   isFeedUnavailableError,
+  isSignatureVerificationError,
   isUnsupportedPlatformError,
   resolveUpdateErrorMessage,
+  SIGNATURE_VERIFICATION_MESSAGE,
   UPDATE_FEED_UNAVAILABLE_MESSAGE,
   UNSUPPORTED_PLATFORM_MESSAGE,
 } from "../../src/services/updateErrors";
@@ -47,6 +49,15 @@ describe("isUnsupportedPlatformError", () => {
   });
 });
 
+describe("isSignatureVerificationError", () => {
+  it.each([
+    "The signature verification failed",
+    "signature verify error",
+  ])("detects signature failures: %s", (message) => {
+    expect(isSignatureVerificationError(message)).toBe(true);
+  });
+});
+
 describe("resolveUpdateErrorMessage", () => {
   it("returns feed guidance for missing release JSON", () => {
     expect(
@@ -58,6 +69,12 @@ describe("resolveUpdateErrorMessage", () => {
     expect(
       resolveUpdateErrorMessage("fallback platforms `windows-aarch64`")
     ).toBe(UNSUPPORTED_PLATFORM_MESSAGE);
+  });
+
+  it("returns signing guidance for signature verification failures", () => {
+    expect(resolveUpdateErrorMessage("The signature verification failed")).toBe(
+      SIGNATURE_VERIFICATION_MESSAGE
+    );
   });
 
   it("wraps unknown errors", () => {

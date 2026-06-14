@@ -7,6 +7,11 @@ export const UNSUPPORTED_PLATFORM_MESSAGE =
   "windows-aarch64 installer yet. Install the ARM64 setup from GitHub Releases, or publish a " +
   "new release after the Release workflow builds both x64 and ARM64.";
 
+export const SIGNATURE_VERIFICATION_MESSAGE =
+  "The downloaded update could not be verified against the published installer. " +
+  "Install the matching ARM64 (or x64) setup from GitHub Releases once, then try Check for Updates again. " +
+  "If it still fails, confirm Settings → Actions secrets match scripts/tauri-signing.key and re-run Release.";
+
 export function isFeedUnavailableError(message: string): boolean {
   const lower = message.toLowerCase();
   return (
@@ -24,7 +29,15 @@ export function isUnsupportedPlatformError(message: string): boolean {
   );
 }
 
+export function isSignatureVerificationError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("signature verification failed") || lower.includes("signature verify");
+}
+
 export function resolveUpdateErrorMessage(raw: string): string {
+  if (isSignatureVerificationError(raw)) {
+    return SIGNATURE_VERIFICATION_MESSAGE;
+  }
   if (isUnsupportedPlatformError(raw)) {
     return UNSUPPORTED_PLATFORM_MESSAGE;
   }

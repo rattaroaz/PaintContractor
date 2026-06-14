@@ -21,4 +21,19 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "YOUR_STRONG_PASSWORD"
 npm run tauri signer sign -- scripts/sign-test.txt
 ```
 
+Check that GitHub releases use the same key pair (must match `scripts/tauri-signing.key.pub`):
+
+```powershell
+$env:RELEASE_TAG = "v1.1.0"
+npm run verify:signing-key
+npm run verify:release-signatures
+```
+
+Both commands should pass. `verify:release-signatures` downloads each installer and checks the
+cryptographic signature (not just the key id).
+
+If `verify:signing-key` reports a **signing key mismatch**, the Release workflow secret does not
+match `tauri.conf.json`. If it passes but the app still fails, install the latest setup.exe from
+GitHub Releases once (your installed build may predate a fixed feed).
+
 Publish a release: bump versions, push tag `vX.Y.Z`, wait for the Release workflow.

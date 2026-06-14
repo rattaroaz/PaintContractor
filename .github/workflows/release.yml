@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v1.1.0)"
+        description: "Release tag (e.g. v1.2.0)"
         required: true
-        default: "v1.1.0"
+        default: "v1.2.0"
 
 permissions:
   contents: write
@@ -130,12 +130,27 @@ jobs:
           git fetch origin main --depth=1
           mkdir -p scripts
           git show origin/main:scripts/validate-latest-json.mjs > scripts/validate-latest-json.mjs
+          git show origin/main:scripts/verify-signing-key-match.mjs > scripts/verify-signing-key-match.mjs
+          git show origin/main:scripts/verify-release-signatures.mjs > scripts/verify-release-signatures.mjs
+          git show origin/main:scripts/minisign-utils.mjs > scripts/minisign-utils.mjs
 
       - name: Validate latest.json x64 feed
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
           EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis
         run: node scripts/validate-latest-json.mjs
+
+      - name: Verify signing key matches tauri.conf.json pubkey
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis
+        run: node scripts/verify-signing-key-match.mjs
+
+      - name: Verify release installer signatures
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis
+        run: node scripts/verify-release-signatures.mjs
 
   release-arm64:
     name: Build Windows ARM64
@@ -212,7 +227,7 @@ jobs:
         run: |
           git fetch origin main --depth=1
           mkdir -p scripts
-          for script in merge-updater-platform.mjs repair-latest-json-urls.mjs validate-latest-json.mjs; do
+          for script in merge-updater-platform.mjs repair-latest-json-urls.mjs validate-latest-json.mjs verify-signing-key-match.mjs verify-release-signatures.mjs minisign-utils.mjs; do
             git show origin/main:scripts/$script > scripts/$script
           done
 
@@ -238,3 +253,15 @@ jobs:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
           EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis,windows-aarch64,windows-aarch64-nsis
         run: node scripts/validate-latest-json.mjs
+
+      - name: Verify signing key matches tauri.conf.json pubkey
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis,windows-aarch64,windows-aarch64-nsis
+        run: node scripts/verify-signing-key-match.mjs
+
+      - name: Verify release installer signatures
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis,windows-aarch64,windows-aarch64-nsis
+        run: node scripts/verify-release-signatures.mjs
