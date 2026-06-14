@@ -124,11 +124,18 @@ jobs:
             Write-Error "No x64 NSIS setup.exe artifact found after build."
           }
 
+      - name: Sync latest.json helper scripts from main
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          mkdir -p scripts
+          git show origin/main:scripts/validate-latest-json.mjs > scripts/validate-latest-json.mjs
+
       - name: Validate latest.json x64 feed
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
           EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis
-        run: npm run validate:latest-json
+        run: node scripts/validate-latest-json.mjs
 
   release-arm64:
     name: Build Windows ARM64
@@ -200,6 +207,15 @@ jobs:
             Write-Error "No ARM64 NSIS setup.exe artifact found after build."
           }
 
+      - name: Sync latest.json helper scripts from main
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          mkdir -p scripts
+          for script in merge-updater-platform.mjs repair-latest-json-urls.mjs validate-latest-json.mjs; do
+            git show origin/main:scripts/$script > scripts/$script
+          done
+
       - name: Merge ARM64 into latest.json
         shell: bash
         env:
@@ -215,10 +231,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: npm run repair:latest-json
+        run: node scripts/repair-latest-json-urls.mjs
 
       - name: Validate latest.json x64 and ARM64 feed
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
           EXPECT_PLATFORMS: windows-x86_64,windows-x86_64-nsis,windows-aarch64,windows-aarch64-nsis
-        run: npm run validate:latest-json
+        run: node scripts/validate-latest-json.mjs
