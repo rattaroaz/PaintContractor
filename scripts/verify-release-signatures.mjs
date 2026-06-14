@@ -21,6 +21,54 @@ if (!tag) {
   process.exit(1);
 }
 
+function encodeReleaseAssetUrl(repo, tag, assetPath) {
+  const encodedName = assetPath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `https://github.com/${repo}/releases/download/${tag}/${encodedName}`;
+}
+
+function buildUrlCandidates(entryUrl) {
+  const urlCandidates = [entryUrl];
+  try {
+    const parsed = new URL(entryUrl);
+    const rawName = decodeURIComponent(parsed.pathname.split("/").pop() ?? "");
+    const dottedName = rawName.replace(/ /g, ".");
+    if (dottedName !== rawName) {
+      urlCandidates.push(encodeReleaseAssetUrl(repo, tag, dottedName));
+    }
+  } catch {
+    // keep original url only
+  }
+  return urlCandidates;
+}
+
+async function downloadInstaller(entryUrl) {
+  const urlCandidates = buildUrlCandidates(entryUrl);
+  let lastStatus = 0;
+  for (const candidate of urlCandidates) {
+    const assetRes = await fetch(candidate, { cache: "no-store" });
+    if (assetRes.ok) {
+      if (candidate !== entryUrl) {
+        console.warn(
+          `Live URL differs from latest.json; downloaded asset from ${candidate}`
+        );
+      }
+      return {
+        ok: true,
+        bytes: Buffer.from(await assetRes.arrayBuffer()),
+        url: candidate,
+      };
+    }
+    lastStatus = assetRes.status;
+  }
+  return {
+    ok: false,
+    error: `Failed to download asset (${lastStatus}). Tried: ${urlCandidates.join(" | ")}`,
+  };
+}
+
 const conf = JSON.parse(
   readFileSync(path.join(root, "src-tauri", "tauri.conf.json"), "utf8")
 );
@@ -49,19 +97,22 @@ for (const platform of expectedPlatforms) {
     continue;
   }
 
-  const assetRes = await fetch(entry.url, { cache: "no-store" });
-  if (!assetRes.ok) {
-    console.error(`Failed to download ${platform} asset (${assetRes.status}): ${entry.url}`);
+  const download = await downloadInstaller(entry.url);
+  if (!download.ok) {
+    console.error(`${platform}: ${download.error}`);
     failed = true;
     continue;
   }
 
-  const bytes = Buffer.from(await assetRes.arrayBuffer());
-  const result = await verifyMinisignArtifact(bytes, entry.signature, pubContent);
+  const result = await verifyMinisignArtifact(
+    download.bytes,
+    entry.signature,
+    pubContent
+  );
   if (result.ok) {
-    console.log(`${platform}: signature OK (${bytes.length} bytes)`);
+    console.log(`${platform}: signature OK (${download.bytes.length} bytes)`);
   } else {
-    console.error(`${platform}: ${result.reason} — ${entry.url}`);
+    console.error(`${platform}: ${result.reason} — ${download.url}`);
     failed = true;
   }
 }

@@ -53,6 +53,7 @@ describe("isSignatureVerificationError", () => {
   it.each([
     "The signature verification failed",
     "signature verify error",
+    "The signature was created with a different key than the one provided",
   ])("detects signature failures: %s", (message) => {
     expect(isSignatureVerificationError(message)).toBe(true);
   });
@@ -75,6 +76,14 @@ describe("resolveUpdateErrorMessage", () => {
     expect(resolveUpdateErrorMessage("The signature verification failed")).toBe(
       SIGNATURE_VERIFICATION_MESSAGE
     );
+  });
+
+  it("returns signing guidance for signing key mismatch failures", () => {
+    expect(
+      resolveUpdateErrorMessage(
+        "The signature was created with a different key than the one provided"
+      )
+    ).toBe(SIGNATURE_VERIFICATION_MESSAGE);
   });
 
   it("wraps unknown errors", () => {

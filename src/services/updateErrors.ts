@@ -31,7 +31,11 @@ export function isUnsupportedPlatformError(message: string): boolean {
 
 export function isSignatureVerificationError(message: string): boolean {
   const lower = message.toLowerCase();
-  return lower.includes("signature verification failed") || lower.includes("signature verify");
+  return (
+    lower.includes("signature verification failed") ||
+    lower.includes("signature verify") ||
+    lower.includes("different key")
+  );
 }
 
 export function resolveUpdateErrorMessage(raw: string): string {
