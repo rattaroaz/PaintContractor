@@ -210,6 +210,13 @@ jobs:
           PLATFORM_KEY: windows-aarch64
         run: node scripts/merge-updater-platform.mjs
 
+      - name: Repair latest.json asset URLs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+        run: npm run repair:latest-json
+
       - name: Validate latest.json x64 and ARM64 feed
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}

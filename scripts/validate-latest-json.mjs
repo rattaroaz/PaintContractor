@@ -48,13 +48,24 @@ async function fetchLatestJson(latestUrl) {
 }
 
 async function assertReachable(url) {
-  let response = await fetch(url, { method: "HEAD", redirect: "follow" });
-  if (response.status === 405 || response.status === 403) {
-    response = await fetch(url, { method: "GET", redirect: "follow" });
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= fetchAttempts; attempt++) {
+    let response = await fetch(url, { method: "HEAD", redirect: "follow" });
+    if (!response.ok) {
+      response = await fetch(url, { method: "GET", redirect: "follow" });
+    }
+    lastStatus = response.status;
+    if (response.ok) {
+      return;
+    }
+    if (attempt < fetchAttempts) {
+      console.warn(
+        `Asset not ready (${response.status}) for ${url}; retry ${attempt}/${fetchAttempts} in ${fetchDelayMs}ms`
+      );
+      await sleep(fetchDelayMs);
+    }
   }
-  if (!response.ok) {
-    throw new Error(`Asset URL is not reachable (${response.status}): ${url}`);
-  }
+  throw new Error(`Asset URL is not reachable (${lastStatus}): ${url}`);
 }
 
 const latestUrl = `https://github.com/${repo}/releases/download/${tag}/latest.json`;
@@ -119,6 +130,9 @@ for (const platform of expectedPlatforms) {
 
   if (!reachable) {
     console.error(lastError instanceof Error ? lastError.message : String(lastError));
+    console.error(
+      `Tried URL candidates: ${urlCandidates.join(" | ")}`
+    );
     process.exit(1);
   }
 }
