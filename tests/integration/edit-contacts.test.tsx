@@ -147,6 +147,9 @@ describe("EditContractor", () => {
     renderWithProviders(<EditContractor />);
     const user = userEvent.setup();
     const picker = await screen.findByLabelText(/^contractor$/i);
+    await waitFor(() => {
+      expect(within(picker).getByRole("option", { name: c.name })).toBeInTheDocument();
+    });
     await user.selectOptions(picker, c.name);
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
