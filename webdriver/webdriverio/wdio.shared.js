@@ -79,7 +79,12 @@ export function createWdioConfig({ autoConfirm = false, specGlobs } = {}) {
         ...(process.platform === "win32"
           ? {
               "ms:edgeOptions": {
-                args: ["--remote-debugging-port=9222"],
+                args: [
+                  "--remote-debugging-port=9222",
+                  "--disable-dev-shm-usage",
+                  "--no-sandbox",
+                  "--disable-gpu",
+                ],
               },
             }
           : {}),
