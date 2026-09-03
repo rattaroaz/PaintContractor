@@ -76,6 +76,13 @@ export function createWdioConfig({ autoConfirm = false, specGlobs } = {}) {
         "tauri:options": {
           application: appBinary(),
         },
+        ...(process.platform === "win32"
+          ? {
+              "ms:edgeOptions": {
+                args: ["--remote-debugging-port=9222"],
+              },
+            }
+          : {}),
       },
     ],
     reporters: ["spec"],
