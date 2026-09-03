@@ -67,6 +67,8 @@ jobs:
 
       - name: Run WebDriver suite (Windows)
         if: matrix.os == 'windows-latest'
+        env:
+          WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222"
         run: npm run test:webdriver
 
       - name: Run destructive WebDriver specs (Linux)
@@ -75,4 +77,6 @@ jobs:
 
       - name: Run destructive WebDriver specs (Windows)
         if: matrix.os == 'windows-latest'
+        env:
+          WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=9222"
         run: npm run test:webdriver:destructive
