@@ -100,6 +100,13 @@ export function createWdioConfig({ autoConfirm = false, specGlobs } = {}) {
       if (autoConfirm) {
         buildEnv.VITE_AUTO_CONFIRM = "1";
       }
+      if (process.platform === "win32") {
+        buildEnv.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS =
+          "--remote-debugging-port=9222";
+        console.log(
+          "[webdriver] Windows: enabled WebView2 remote debugging on port 9222"
+        );
+      }
 
       const result = spawnSync(
         "npm",
@@ -131,13 +138,21 @@ export function createWdioConfig({ autoConfirm = false, specGlobs } = {}) {
       const pathEnv = process.env.PATH?.includes(cargoBin)
         ? process.env.PATH
         : `${cargoBin}${path.delimiter}${process.env.PATH ?? ""}`;
+      const spawnEnv = {
+        ...process.env,
+        PATH: pathEnv,
+        PAINT_CONTRACTOR_DB_PATH: testDbPath,
+      };
+      if (process.platform === "win32") {
+        spawnEnv.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS =
+          "--remote-debugging-port=9222";
+        console.log(
+          "[webdriver] Windows: setting WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for tauri-driver"
+        );
+      }
       tauriDriver = spawn(driver, tauriDriverArgs(), {
         stdio: [null, process.stdout, process.stderr],
-        env: {
-          ...process.env,
-          PATH: pathEnv,
-          PAINT_CONTRACTOR_DB_PATH: testDbPath,
-        },
+        env: spawnEnv,
       });
       tauriDriver.on("error", (error) => {
         console.error("tauri-driver error:", error);
