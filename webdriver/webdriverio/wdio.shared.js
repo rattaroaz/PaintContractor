@@ -84,6 +84,7 @@ export function createWdioConfig({ autoConfirm = false, specGlobs } = {}) {
                   "--disable-dev-shm-usage",
                   "--no-sandbox",
                   "--disable-gpu",
+                  `--user-data-dir=${path.join(os.tmpdir(), "webdriver-edge-profile")}`,
                 ],
               },
             }
